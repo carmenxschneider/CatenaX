@@ -16,6 +16,7 @@ TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else "templates/Template_UseCase_PUL
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Overview_CW40_26.pptx"
 
 EMU = 914400
+ITALIC = ' i="1"'
 FONT = "Segoe UI"
 
 # Status colours (template legend)
@@ -86,19 +87,19 @@ class Slide:
             f'<p:txBody><a:bodyPr rtlCol="0" anchor="ctr"/><a:lstStyle/><a:p><a:endParaRPr lang="de-DE"/></a:p></p:txBody></p:sp>')
 
     def text(self, name, x, y, w, h, runs, anchor="ctr", algn="l", wrap=True, line_pts=None):
-        """runs: list of paragraphs, each a list of (text, size_pt, bold, color, spacing)."""
+        """runs: list of paragraphs, each a list of (text, size_pt, bold, color, spacing, italic)."""
         paras = []
         for para in runs:
             lnspc = f'<a:lnSpc><a:spcPts val="{line_pts}"/></a:lnSpc>' if line_pts else ""
             rs = "".join(
-                f'<a:r><a:rPr lang="de-DE" sz="{int(sz * 100)}" b="{1 if b else 0}" kern="0"'
+                f'<a:r><a:rPr lang="de-DE" sz="{int(sz * 100)}" b="{1 if b else 0}"{ITALIC if it else ""} kern="0"'
                 f'{f" spc={chr(34)}{spc}{chr(34)}" if spc else ""} dirty="0">'
                 f'<a:solidFill><a:srgbClr val="{c}"/></a:solidFill>'
                 f'<a:latin typeface="{FONT}" pitchFamily="34" charset="0"/>'
                 f'<a:ea typeface="{FONT}" pitchFamily="34" charset="-122"/>'
                 f'<a:cs typeface="{FONT}" pitchFamily="34" charset="-120"/></a:rPr>'
                 f'<a:t>{escape(t)}</a:t></a:r>'
-                for t, sz, b, c, spc in para)
+                for t, sz, b, c, spc, it in para)
             paras.append(f'<a:p><a:pPr marL="0" indent="0" algn="{algn}">{lnspc}<a:buNone/></a:pPr>{rs}</a:p>')
         self.shapes.append(
             f'<p:sp><p:nvSpPr><p:cNvPr id="{self._id()}" name="{escape(name)}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
@@ -112,18 +113,15 @@ def _xfrm(x, y, w, h):
             f'<a:ext cx="{round(w * EMU)}" cy="{round(h * EMU)}"/></a:xfrm>')
 
 
-def r(text, sz, b=False, c=INK, spc=None):
-    return (text, sz, b, c, spc)
+def r(text, sz, b=False, c=INK, spc=None, i=False):
+    return (text, sz, b, c, spc, i)
 
 
-def build():
-    s = Slide()
-
-    # ---------- Header (same positions/sizes as the PULSE template) ----------
+def add_header(s, headline, subline):
+    """Eyebrow, headline, status legend and date box (same positions/sizes as the PULSE template)."""
     s.text("Eyebrow", 0.35, 0.26, 4.0, 0.12, [[r("USE CASE PULSE · CATENA-X", 7.5, True, COMPLETED, 75)]])
-    s.text("Headline", 0.35, 0.42, 7.99, 0.38, [[r("Overview", 26, True, INK_TITLE, -26)]])
-    s.text("Subline", 0.35, 0.84, 6.0, 0.16,
-           [[r(f"{len(USE_CASES)} use cases · sorted by overall status", 9.5, False, MUTED)]])
+    s.text("Headline", 0.35, 0.42, 7.99, 0.38, [[r(headline, 26, True, INK_TITLE, -26)]])
+    s.text("Subline", 0.35, 0.84, 6.0, 0.16, [[r(subline, 9.5, False, MUTED)]])
 
     # Legend box + date box (top right, like Responsibilities/Date boxes)
     s.shape("Legend Box", 8.18, 0.26, 3.53, 0.73, "roundRect", 11363, "FFFFFF", BORDER, 9525)
@@ -139,6 +137,11 @@ def build():
     s.shape("Date Box", 11.79, 0.26, 1.19, 0.73, "roundRect", 11363, "FFFFFF", BORDER, 9525)
     s.text("Date Label", 11.89, 0.46, 1.00, 0.11, [[r("Date", 6.5, True, MUTED)]], anchor="t")
     s.text("Date Value", 11.89, 0.60, 1.00, 0.20, [[r("CW 40 / 2026", 8.5, True, INK_STRONG)]], anchor="t")
+
+
+def build():
+    s = Slide()
+    add_header(s, "Overview", f"{len(USE_CASES)} use cases · sorted by overall status")
 
     # ---------- Main card ----------
     card_y, row_h, head_h = 1.07, 0.725, 0.34
@@ -234,21 +237,20 @@ def build():
     return s
 
 
-def main():
-    s = build()
-    zin = zipfile.ZipFile(TEMPLATE)
+def write_pptx(shapes, output, notes_text, template=TEMPLATE):
+    """Write the template package with its slide content replaced by `shapes`."""
+    zin = zipfile.ZipFile(template)
     slide = zin.read("ppt/slides/slide1.xml").decode("utf8")
     # Keep group header + hidden think-cell frame, replace every visible shape
     head_end = slide.index("</p:graphicFrame>") + len("</p:graphicFrame>")
     tail_start = slide.rindex("</p:spTree>")
-    slide = slide[:head_end] + "".join(s.shapes) + slide[tail_start:]
+    slide = slide[:head_end] + "".join(shapes) + slide[tail_start:]
 
     notes = zin.read("ppt/notesSlides/notesSlide1.xml").decode("utf8")
     notes = re.sub(r"<a:t>Vorlage für Confluence[^<]*</a:t>",
-                   "<a:t>Use Case Pulse Overview CW 40 / 2026 – one row per use case, "
-                   "sorted by overall status.</a:t>", notes)
+                   f"<a:t>{escape(notes_text)}</a:t>", notes)
 
-    with zipfile.ZipFile(OUTPUT, "w", zipfile.ZIP_DEFLATED) as zout:
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zout:
         for item in zin.infolist():
             data = zin.read(item.filename)
             if item.filename == "ppt/slides/slide1.xml":
@@ -256,7 +258,12 @@ def main():
             elif item.filename == "ppt/notesSlides/notesSlide1.xml":
                 data = notes.encode("utf8")
             zout.writestr(item, data)
-    print("wrote", OUTPUT)
+    print("wrote", output)
+
+
+def main():
+    write_pptx(build().shapes, OUTPUT,
+               "Use Case Pulse Overview CW 40 / 2026 – one row per use case, sorted by overall status.")
 
 
 if __name__ == "__main__":
