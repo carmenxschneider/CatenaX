@@ -60,8 +60,8 @@ USE_CASES = [
 DIM_NAMES = ["External · CX Association", "Business", "Data Provisioning", "Technical"]
 
 DECISIONS = [
-    ("Quality:", "Rescope von 15 auf 1 Lieferant, bis Early Warning Production MVP live ist."),
-    ("PURIS:", "Wie und wann wird über die WINGS-Connectivity-Rollout-Roadmap entschieden?"),
+    ("Quality:", "Approve rescoping from 15 to 1 supplier until the Early Warning Production MVP is live?"),
+    ("PURIS:", "When and how should the WINGS connectivity rollout roadmap be decided?"),
 ]
 
 
