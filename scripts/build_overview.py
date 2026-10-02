@@ -37,7 +37,7 @@ DOT = {"ok": ON_TRACK, "ps": PROBLEM, "esc": ESCALATION, "ns": NOT_STARTED, "don
 USE_CASES = [
     dict(name="Quality", abbr="quality-cx", status="esc", phase="Piloting",
          ms=("ps", "Domain expertise aligned", "30 Sep 2026"),
-         dims=["ok", "ps", "ok", "ps"], sa="ps", sup=(0, 1), note="rescoped", decision=1),
+         dims=["ok", "ps", "ps", "ps"], sa="ps", sup=(0, 1), note="rescoped", decision=1),
     dict(name="Battery Passport", abbr="Batt Pass", status="ps", phase="Pilot",
          ms=("ok", "Tech requirements done", "31 Oct 2026"),
          dims=["ps", "ps", "ok", "ok"], sa="ok", sup=(0, 1)),
@@ -49,7 +49,7 @@ USE_CASES = [
          dims=["ok", "ps", "ps", "ps"], sa="ps", sup=(1, 6), decision=2),
     dict(name="Business Partner Data Mgmt", abbr="BPDM", status="ps", phase="Implementation",
          ms=("ok", "Define BPDM target picture", "31 Oct 2026"),
-         dims=["ps", "ps", "ok", "ok"], sa="ns", sup=(0, 1)),
+         dims=["ps", "ps", "ok", "ps"], sa="ns", sup=(0, 1)),
     dict(name="Certificate Management", abbr="cert-mgmt", status="ps", phase="Scaling",
          ms=("ok", "Official CX CCM release", "Sep 2026"),
          dims=["ps", "ok", "ok", "ok"], sa="ok", sup=(72, 100)),
@@ -147,9 +147,9 @@ def build():
 
     cols = dict(uc=0.55, st=2.70, ph=4.30, ms=5.48, dim=7.72, sup=11.15, dec=12.50)
     head = [("uc", "Use case"), ("st", "Overall status"), ("ph", "Phase"),
-            ("ms", "Next milestone"), ("dim", "Dimensions"), ("sup", "Suppliers")]
+            ("ms", "Next milestone"), ("dim", "Dimensions"), ("sup", "Supplier Enablement")]
     for key, lbl in head:
-        s.text(f"Head {lbl}", cols[key], card_y + 0.12, 2.0, 0.14,
+        s.text(f"Head {lbl}", cols[key], card_y + 0.12, 1.80, 0.14,
                [[r(lbl.upper(), 7.5, True, INK_STRONG, 51)]])
 
     y0 = card_y + head_h
