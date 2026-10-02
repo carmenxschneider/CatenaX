@@ -61,74 +61,77 @@ ROWS = [
 
 def pill_width(label):
     # dot + left padding, ~0.068" per 8pt bold character, right padding
-    return 0.19 + 0.068 * len(label) + 0.08
+    return 0.17 + 0.068 * len(label) + 0.08
+
+
+def hanging(shape_xml, first_line_indent):
+    """Indent only the first line of a text box (text flows under the decision flag)."""
+    return shape_xml.replace('marL="0" indent="0"', f'marL="0" indent="{round(first_line_indent * 914400)}"')
 
 
 def build():
+    """Typography (one rule set for the whole matrix):
+    bold   = use case names, row labels (sentence case, grey, like the template labels),
+             pill text and the supplier figure
+    9pt    = every cell value, regular weight, INK
+    8pt    = every secondary line (dates, %, notes), MUTED
+    One dot size (0.09") for milestones and dimensions.
+    """
     s = Slide()
     add_header(s, "Management Overview", "Management report on the status of all Catena-X use cases")
 
-    card_x, card_y, card_w, card_bottom = 0.35, 1.07, 12.64, 7.24
-    s.shape("Matrix Card", card_x, card_y, card_w, card_bottom - card_y, "roundRect", 2000, "FFFFFF", BORDER)
-
-    panel_x, panel_w = 0.45, 1.45
-    label_x, label_w = 0.55, 1.28
-    col_x0, col_x1 = 2.00, 12.85
-    cw = (col_x1 - col_x0) / len(USE_CASES)
-    pad = 0.06
-    head_y, head_h = card_y + 0.10, 0.92
+    top_y, bottom_y = 1.07, 7.24
+    label_x, label_w = 0.40, 1.18
+    col_x0, col_x1, gap = 1.66, 12.99, 0.08
+    cw = (col_x1 - col_x0 - gap * (len(USE_CASES) - 1)) / len(USE_CASES)
+    pad = 0.09
+    head_y, head_h = top_y + 0.10, 0.92
 
     rows_top = head_y + head_h
-    rows_bottom = card_bottom - 0.10
+    rows_bottom = bottom_y - 0.10
     spare = rows_bottom - rows_top - sum(h for _, _, h in ROWS)
     heights = {k: h + spare / len(ROWS) for k, _, h in ROWS}
 
-    # Row label column on a tinted panel, clearly apart from the matrix
-    s.shape("Row Label Panel", panel_x, rows_top, panel_w, rows_bottom - rows_top, "roundRect", 3000, TILE)
-
-    # Column headers: name (up to three lines, bottom-aligned), abbreviation, status accent bar
+    # One white card per use case (template tile style) — the grey gaps make each column a unit
     for c, uc in enumerate(USE_CASES):
-        x = col_x0 + c * cw + pad
-        w = cw - 2 * pad
+        cx = col_x0 + c * (cw + gap)
+        x, w = cx + pad, cw - 2 * pad
         n = uc["name"]
-        s.text(f"Col {n} Name", x, head_y, w, 0.58, [[r(n, F_NAME, True, INK)]], anchor="b", line_pts=1300)
+        s.shape(f"Col {n} Card", cx, top_y, cw, bottom_y - top_y, "roundRect", 4500, "FFFFFF", BORDER)
+        s.text(f"Col {n} Name", x, head_y, w, 0.58, [[r(n, F_NAME, True, INK_STRONG)]], anchor="b", line_pts=1300)
         s.text(f"Col {n} Abbr", x, head_y + 0.61, w, 0.16, [[r(ABBR[n], F_ABBR, False, MUTED)]])
-        s.shape(f"Col {n} Status Bar", x, head_y + head_h - 0.08, w, 0.045, "roundRect", 50000,
+        s.shape(f"Col {n} Status Bar", x, head_y + head_h - 0.08, w, 0.04, "roundRect", 50000,
                 STATUS[uc["status"]][1])
-
-    # Thin vertical dividers (0.5pt) between the use case columns, header to bottom
-    for c in range(1, len(USE_CASES)):
-        s.shape(f"Col Divider {c}", col_x0 + c * cw - 0.0035, head_y, 0.007, rows_bottom - head_y, fill=NOT_STARTED)
 
     y = rows_top
     for key, label, _ in ROWS:
         h = heights[key]
-        s.shape(f"Row Divider {label}", col_x0, y, col_x1 - col_x0, 0.007, fill=BORDER)
-        s.text(f"Row Label {label}", label_x, y + 0.11, label_w, h - 0.16,
-               [[r(label.upper(), F_LABEL, True, INK_STRONG)]], anchor="t", line_pts=1150)
         top = y + 0.11
+        s.text(f"Row Label {label}", label_x, top, label_w, h - 0.16,
+               [[r(label, F_LABEL, True, MUTED)]], anchor="t", line_pts=1150)
         for c, uc in enumerate(USE_CASES):
-            x = col_x0 + c * cw + pad
-            w = cw - 2 * pad
+            cx = col_x0 + c * (cw + gap)
+            x, w = cx + pad, cw - 2 * pad
             n = uc["name"]
+            if key != ROWS[0][0]:
+                s.shape(f"{n} Row Divider {label}", x, y, w, 0.007, fill=BORDER)
 
             if key == "status":
                 lbl, fill, fg = STATUS[uc["status"]]
-                pw, ph = pill_width(lbl), 0.22
-                s.shape(f"{n} Status Pill", x, top - 0.02, pw, ph, "roundRect", 50000, fill)
-                s.shape(f"{n} Status Dot", x + 0.09, top - 0.02 + ph / 2 - 0.022, 0.045, 0.045, "ellipse", fill=fg)
-                s.text(f"{n} Status Text", x + 0.19, top - 0.02, pw - 0.23, ph,
+                pw, ph = min(pill_width(lbl), w), 0.22
+                s.shape(f"{n} Status Pill", x, top - 0.03, pw, ph, "roundRect", 50000, fill)
+                s.shape(f"{n} Status Dot", x + 0.08, top - 0.03 + ph / 2 - 0.022, 0.045, 0.045, "ellipse", fill=fg)
+                s.text(f"{n} Status Text", x + 0.17, top - 0.03, pw - 0.20, ph,
                        [[r(lbl, F_SUB, True, fg)]], wrap=False)
 
             elif key == "phase":
-                s.text(f"{n} Phase", x, top, w, LINE, [[r(uc["phase"], F_CELL, True, INK_STRONG)]], anchor="t")
+                s.text(f"{n} Phase", x, top, w, LINE, [[r(uc["phase"], F_CELL, False, INK)]], anchor="t")
 
             elif key == "ms":
                 st, ms_name, ms_date = uc["ms"]
-                s.shape(f"{n} Milestone Dot", x, top + 0.02, 0.12, 0.12, "ellipse", fill=DOT[st],
-                        line="FFFFFF", line_w=19050)
-                s.text(f"{n} Milestone", x + 0.18, top, w - 0.18, h - 0.14,
-                       [[r(ms_name, F_CELL, True, INK_STRONG)], [r(ms_date, F_SUB, False, MUTED)]],
+                s.shape(f"{n} Milestone Dot", x, top + 0.04, 0.09, 0.09, "ellipse", fill=DOT[st])
+                s.text(f"{n} Milestone", x + 0.15, top, w - 0.15, h - 0.14,
+                       [[r(ms_name, F_CELL, False, INK)], [r(ms_date, F_SUB, False, MUTED)]],
                        anchor="t", line_pts=1150)
 
             elif key == "dims":
@@ -151,7 +154,7 @@ def build():
             elif key == "golive":
                 value, note = GO_LIVE[n]
                 if value:
-                    paras = [[r(value[0], F_CELL, True, INK_STRONG)]]
+                    paras = [[r(value[0], F_CELL, False, INK)]]
                     if value[1]:
                         paras.append([r(value[1], F_SUB, False, MUTED)])
                 else:
@@ -161,11 +164,12 @@ def build():
             elif key == "dec":
                 if uc.get("decision"):
                     num = uc["decision"]
-                    s.shape(f"{n} Decision Flag", x, top, 0.19, 0.19, "ellipse", fill=COMPLETED)
-                    s.text(f"{n} Decision No", x, top, 0.19, 0.19,
+                    s.shape(f"{n} Decision Flag", x, top + 0.005, 0.17, 0.17, "ellipse", fill=COMPLETED)
+                    s.text(f"{n} Decision No", x, top + 0.005, 0.17, 0.17,
                            [[r(str(num), F_SUB, True, "FFFFFF")]], algn="ctr")
-                    s.text(f"{n} Decision", x + 0.25, top, w - 0.25, h - 0.14,
+                    s.text(f"{n} Decision", x, top, w, h - 0.14,
                            [[r(DECISIONS[num - 1][1], F_CELL, False, INK)]], anchor="t", line_pts=1150)
+                    s.shapes[-1] = hanging(s.shapes[-1], 0.23)
                 else:
                     s.text(f"{n} Decision None", x, top, w, LINE, [[r("–", F_CELL, False, FAINT)]], anchor="t")
         y += h
