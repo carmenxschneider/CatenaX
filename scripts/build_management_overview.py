@@ -1,7 +1,7 @@
 """Build the "Use Case Pulse – Management Overview" slide (variant 2).
 
 Transposed version of build_overview.py: one column per use case, one row per
-KPI, so management can scan a single KPI across all use cases. Uses the same
+KPI. Each use case reads top to bottom as its own column. Uses the same
 template, colours and shape vocabulary as variant 1.
 
     python scripts/build_management_overview.py [template.pptx] [output.pptx]
@@ -10,167 +10,172 @@ template, colours and shape vocabulary as variant 1.
 import sys
 
 from build_overview import (
-    BORDER, COMPLETED, DECISIONS, DIM_NAMES, DOT, FAINT, INK, INK_STRONG, MUTED, STATUS, TEMPLATE, USE_CASES,
-    Slide, add_header, r, write_pptx,
+    BORDER, COMPLETED, DECISIONS, DIM_NAMES, DOT, FAINT, INK, INK_STRONG, MUTED, NOT_STARTED, STATUS, TEMPLATE,
+    TILE, USE_CASES, Slide, add_header, r, write_pptx,
 )
 
 TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else TEMPLATE
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW40_26.pptx"
 
-# Management KPIs per use case (KPIS / FINAL GOAL boxes of the original PULSE slides).
-# go_live: (main value, second line) — None = not defined in the source slide.
-EXTRA = {
-    "Quality": dict(go_live=("MVP Jan '27", "Scaling until 2030"), benefit=None),
-    "Battery Passport": dict(go_live=("Feb 2027", None), benefit=None),
-    "Product Passes": dict(go_live=None, go_live_note="not defined yet", benefit=None),
-    "PURIS": dict(go_live=None, go_live_note="not specified", benefit="€32.4M"),
-    "Business Partner Data Mgmt": dict(go_live=("Feb 2027", None), benefit=None),
-    "Certificate Management": dict(go_live=("May 2028", None), benefit=None),
-    "Product Carbon Footprint": dict(go_live=("01 Jan 2028", None), benefit=None),
+# Fixed font sizes for every column (pt) — no per-cell shrinking
+F_LABEL, F_NAME, F_ABBR, F_CELL, F_SUB = 9, 11, 8, 9, 8
+
+# Lower-case abbreviations for this slide (cert-mgmt is the original source abbreviation)
+ABBR = {
+    "Quality": "quality-cx",
+    "Battery Passport": "battpass-cx",
+    "Product Passes": "pass-cx",
+    "PURIS": "puris-cx",
+    "Business Partner Data Mgmt": "bpdm-cx",
+    "Certificate Management": "cert-mgmt",
+    "Product Carbon Footprint": "pcf-cx",
 }
 
-PILL_W = {"On Track": 1.03, "Problem Solving": 1.33, "Escalation needed": 1.46, "Not Started": 1.07}
+# E2E go-live target (KPIS box of the original PULSE slides): (main value, second line),
+# or None with a note when the source slide does not define it.
+GO_LIVE = {
+    "Quality": (("MVP Jan '27", "Scaling until 2030"), None),
+    "Battery Passport": (("Feb 2027", None), None),
+    "Product Passes": (None, "not defined yet"),
+    "PURIS": (None, "not specified"),
+    "Business Partner Data Mgmt": (("Feb 2027", None), None),
+    "Certificate Management": (("May 2028", None), None),
+    "Product Carbon Footprint": (("01 Jan 2028", None), None),
+}
+
+# Dimension labels split where they would otherwise wrap mid-phrase in a narrow column
+DIM_LINES = {"External · CX Association": ["External ·", "CX Association"]}
+LINE = 0.165  # height of one 9pt text line
 
 # Row key, label, base height (inches); spare card height is shared out evenly below
 ROWS = [
-    ("status", "Overall status", 0.42),
-    ("phase", "Phase", 0.36),
-    ("ms", "Next milestone", 0.62),
-    ("dims", "Dimensions at risk", 0.82),
+    ("status", "Overall status", 0.38),
+    ("phase", "Phase", 0.34),
+    ("ms", "Next milestone", 0.82),
+    ("dims", "Dimensions", 1.22),
     ("sup", "Suppliers enabled 2026", 0.52),
-    ("golive", "Goal: E2E go-live target", 0.50),
-    ("benefit", "Goal: Final benefit", 0.42),
-    ("dec", "Decision required", 1.00),
+    ("golive", "Goal: E2E go-live target", 0.52),
+    ("dec", "Decision required", 1.14),
 ]
-GROW = {k: 1 for k, _, _ in ROWS}
 
 
-def dims_at_risk(uc):
-    """Only Problem Solving / Escalation dimensions; green and not-started ones are left out."""
-    named = list(zip(DIM_NAMES, uc["dims"])) + [("Supplier Activation", uc["sa"])]
-    return [(name, st) for name, st in named if st in ("ps", "esc")]
+def pill_width(label):
+    # dot + left padding, ~0.068" per 8pt bold character, right padding
+    return 0.19 + 0.068 * len(label) + 0.08
 
 
 def build():
     s = Slide()
-    add_header(s, "Management Overview",
-               f"{len(USE_CASES)} use cases · one KPI per row · sorted by overall status")
+    add_header(s, "Management Overview", "Management report on the status of all Catena-X use cases")
 
     card_x, card_y, card_w, card_bottom = 0.35, 1.07, 12.64, 7.24
     s.shape("Matrix Card", card_x, card_y, card_w, card_bottom - card_y, "roundRect", 2000, "FFFFFF", BORDER)
 
-    label_x, label_w = 0.55, 1.15
-    col_x0, col_x1 = 1.82, 12.79
+    panel_x, panel_w = 0.45, 1.45
+    label_x, label_w = 0.55, 1.28
+    col_x0, col_x1 = 2.00, 12.85
     cw = (col_x1 - col_x0) / len(USE_CASES)
-    pad = 0.05
-    head_y, head_h = card_y + 0.10, 0.60
+    pad = 0.06
+    head_y, head_h = card_y + 0.10, 0.92
 
-    # Distribute the remaining card height over the rows that wrap
     rows_top = head_y + head_h
-    spare = (card_bottom - 0.08) - rows_top - sum(h for _, _, h in ROWS)
-    weight = sum(GROW.values())
-    heights = {k: h + spare * GROW.get(k, 0) / weight for k, _, h in ROWS}
+    rows_bottom = card_bottom - 0.10
+    spare = rows_bottom - rows_top - sum(h for _, _, h in ROWS)
+    heights = {k: h + spare / len(ROWS) for k, _, h in ROWS}
 
-    # Column headers: use case name (up to two lines, bottom-aligned) + abbreviation
+    # Row label column on a tinted panel, clearly apart from the matrix
+    s.shape("Row Label Panel", panel_x, rows_top, panel_w, rows_bottom - rows_top, "roundRect", 3000, TILE)
+
+    # Column headers: name (up to three lines, bottom-aligned), abbreviation, status accent bar
     for c, uc in enumerate(USE_CASES):
         x = col_x0 + c * cw + pad
-        s.text(f"Col {uc['name']} Name", x, head_y, cw - 2 * pad, 0.34,
-               [[r(uc["name"], 8.75, True, INK)]], anchor="b", line_pts=1100)
-        s.text(f"Col {uc['name']} Abbr", x, head_y + 0.37, cw - 2 * pad, 0.15,
-               [[r(uc["abbr"], 7.5, False, MUTED)]])
-    # Vertical column dividers
+        w = cw - 2 * pad
+        n = uc["name"]
+        s.text(f"Col {n} Name", x, head_y, w, 0.58, [[r(n, F_NAME, True, INK)]], anchor="b", line_pts=1300)
+        s.text(f"Col {n} Abbr", x, head_y + 0.61, w, 0.16, [[r(ABBR[n], F_ABBR, False, MUTED)]])
+        s.shape(f"Col {n} Status Bar", x, head_y + head_h - 0.08, w, 0.045, "roundRect", 50000,
+                STATUS[uc["status"]][1])
+
+    # Thin vertical dividers (0.5pt) between the use case columns, header to bottom
     for c in range(1, len(USE_CASES)):
-        s.shape(f"Col Divider {c}", col_x0 + c * cw, head_y + 0.04, 0.007,
-                card_bottom - 0.12 - head_y - 0.04, fill=BORDER)
+        s.shape(f"Col Divider {c}", col_x0 + c * cw - 0.0035, head_y, 0.007, rows_bottom - head_y, fill=NOT_STARTED)
 
     y = rows_top
     for key, label, _ in ROWS:
         h = heights[key]
-        s.shape(f"Row Divider {label}", label_x, y, col_x1 - label_x, 0.007, fill=BORDER)
-        s.text(f"Row Label {label}", label_x, y + 0.12, label_w, 0.30,
-               [[r(label.upper(), 7, True, INK_STRONG, 40)]], anchor="t", line_pts=950)
-        top = y + 0.12
+        s.shape(f"Row Divider {label}", col_x0, y, col_x1 - col_x0, 0.007, fill=BORDER)
+        s.text(f"Row Label {label}", label_x, y + 0.11, label_w, h - 0.16,
+               [[r(label.upper(), F_LABEL, True, INK_STRONG)]], anchor="t", line_pts=1150)
+        top = y + 0.11
         for c, uc in enumerate(USE_CASES):
             x = col_x0 + c * cw + pad
             w = cw - 2 * pad
             n = uc["name"]
-            ex = EXTRA[n]
 
             if key == "status":
                 lbl, fill, fg = STATUS[uc["status"]]
-                pw = PILL_W[lbl]
-                py = top - 0.05
-                s.shape(f"{n} Status Pill", x, py, pw, 0.28, "roundRect", 50000, fill)
-                s.shape(f"{n} Status Dot", x + 0.15, py + 0.115, 0.05, 0.05, "ellipse", fill=fg)
-                s.text(f"{n} Status Text", x + 0.26, py + 0.07, pw - 0.30, 0.14,
-                       [[r(lbl, 7.5, True, fg)]], wrap=False)
+                pw, ph = pill_width(lbl), 0.22
+                s.shape(f"{n} Status Pill", x, top - 0.02, pw, ph, "roundRect", 50000, fill)
+                s.shape(f"{n} Status Dot", x + 0.09, top - 0.02 + ph / 2 - 0.022, 0.045, 0.045, "ellipse", fill=fg)
+                s.text(f"{n} Status Text", x + 0.19, top - 0.02, pw - 0.23, ph,
+                       [[r(lbl, F_SUB, True, fg)]], wrap=False)
 
             elif key == "phase":
-                s.text(f"{n} Phase", x, top, w, 0.17, [[r(uc["phase"], 8.5, True, INK_STRONG)]], anchor="t")
+                s.text(f"{n} Phase", x, top, w, LINE, [[r(uc["phase"], F_CELL, True, INK_STRONG)]], anchor="t")
 
             elif key == "ms":
                 st, ms_name, ms_date = uc["ms"]
-                s.shape(f"{n} Milestone Dot", x, top + 0.005, 0.13, 0.13, "ellipse", fill=DOT[st],
+                s.shape(f"{n} Milestone Dot", x, top + 0.02, 0.12, 0.12, "ellipse", fill=DOT[st],
                         line="FFFFFF", line_w=19050)
-                s.text(f"{n} Milestone", x + 0.19, top - 0.01, w - 0.19, h - 0.14,
-                       [[r(ms_name, 8, True, INK_STRONG)], [r(ms_date, 7.5, False, MUTED)]],
-                       anchor="t", line_pts=1100)
+                s.text(f"{n} Milestone", x + 0.18, top, w - 0.18, h - 0.14,
+                       [[r(ms_name, F_CELL, True, INK_STRONG)], [r(ms_date, F_SUB, False, MUTED)]],
+                       anchor="t", line_pts=1150)
 
             elif key == "dims":
-                risk = dims_at_risk(uc)
-                if not risk:
-                    s.text(f"{n} No Dims", x, top, w, 0.16,
-                           [[r("No dimensions at risk", 7.5, False, FAINT, None, True)]], anchor="t")
-                for k, (dim, st) in enumerate(risk):
-                    ly = top + k * 0.17
-                    s.shape(f"{n} Risk Dot {dim}", x, ly + 0.03, 0.09, 0.09, "ellipse", fill=DOT[st])
-                    s.text(f"{n} Risk {dim}", x + 0.14, ly, w - 0.14, 0.16,
-                           [[r(dim, 7.5, False, INK)]], anchor="t")
+                ly = top
+                for dim, st in list(zip(DIM_NAMES, uc["dims"])) + [("Supplier Activation", uc["sa"])]:
+                    lines = DIM_LINES.get(dim, [dim])
+                    s.shape(f"{n} Dim Dot {dim}", x, ly + 0.04, 0.09, 0.09, "ellipse", fill=DOT[st])
+                    s.text(f"{n} Dim {dim}", x + 0.15, ly, w - 0.15, LINE * len(lines),
+                           [[r(t, F_CELL, False, INK)] for t in lines], anchor="t", line_pts=1150)
+                    ly += LINE * len(lines) + 0.02
 
             elif key == "sup":
                 done, total = uc["sup"]
                 pct = round(100 * done / total)
-                paras = [[r(f"{done} / {total}", 11, True, COMPLETED), r(f"  {pct}%", 7.5, False, MUTED)]]
+                paras = [[r(f"{done} / {total}", F_CELL, True, COMPLETED), r(f"  {pct}%", F_SUB, False, MUTED)]]
                 if uc.get("note"):
-                    paras.append([r("rescoped from 15", 7, False, MUTED)])
-                s.text(f"{n} Suppliers", x, top - 0.04, w, h - 0.10, paras, anchor="t", line_pts=1300)
+                    paras.append([r("rescoped from 15", F_SUB, False, MUTED)])
+                s.text(f"{n} Suppliers", x, top, w, h - 0.14, paras, anchor="t", line_pts=1150)
 
             elif key == "golive":
-                gl = ex["go_live"]
-                if gl:
-                    paras = [[r(gl[0], 8.5, True, INK_STRONG)]]
-                    if gl[1]:
-                        paras.append([r(gl[1], 7.5, False, MUTED)])
+                value, note = GO_LIVE[n]
+                if value:
+                    paras = [[r(value[0], F_CELL, True, INK_STRONG)]]
+                    if value[1]:
+                        paras.append([r(value[1], F_SUB, False, MUTED)])
                 else:
-                    paras = [[r("–  ", 8.5, False, FAINT), r(ex["go_live_note"], 7.5, False, FAINT, None, True)]]
-                s.text(f"{n} Go-live", x, top, w, h - 0.14, paras, anchor="t", line_pts=1100)
-
-            elif key == "benefit":
-                if ex["benefit"]:
-                    s.text(f"{n} Benefit", x, top - 0.04, w, 0.22, [[r(ex["benefit"], 11, True, COMPLETED)]],
-                           anchor="t")
-                else:
-                    s.text(f"{n} Benefit", x, top, w, 0.16,
-                           [[r("Not yet quantified", 7.5, False, FAINT, None, True)]], anchor="t")
+                    paras = [[r("–  ", F_CELL, False, FAINT), r(note, F_SUB, False, FAINT, None, True)]]
+                s.text(f"{n} Go-live", x, top, w, h - 0.14, paras, anchor="t", line_pts=1150)
 
             elif key == "dec":
                 if uc.get("decision"):
                     num = uc["decision"]
-                    s.shape(f"{n} Decision Flag", x, top - 0.01, 0.20, 0.20, "ellipse", fill=COMPLETED)
-                    s.text(f"{n} Decision No", x, top - 0.01, 0.20, 0.20,
-                           [[r(str(num), 7, True, "FFFFFF")]], algn="ctr")
-                    s.text(f"{n} Decision", x + 0.26, top, w - 0.26, h - 0.16,
-                           [[r(DECISIONS[num - 1][1], 7.5, False, INK)]], anchor="t", line_pts=1050)
+                    s.shape(f"{n} Decision Flag", x, top, 0.19, 0.19, "ellipse", fill=COMPLETED)
+                    s.text(f"{n} Decision No", x, top, 0.19, 0.19,
+                           [[r(str(num), F_SUB, True, "FFFFFF")]], algn="ctr")
+                    s.text(f"{n} Decision", x + 0.25, top, w - 0.25, h - 0.14,
+                           [[r(DECISIONS[num - 1][1], F_CELL, False, INK)]], anchor="t", line_pts=1150)
                 else:
-                    s.text(f"{n} Decision None", x, top, w, 0.16, [[r("–", 8.5, False, FAINT)]], anchor="t")
+                    s.text(f"{n} Decision None", x, top, w, LINE, [[r("–", F_CELL, False, FAINT)]], anchor="t")
         y += h
     return s
 
 
 def main():
     write_pptx(build().shapes, OUTPUT,
-               "Use Case Pulse Management Overview CW 40 / 2026 – one column per use case, one KPI per row, "
-               "sorted by overall status. Dimensions at risk show only Problem Solving / Escalation.")
+               "Use Case Pulse Management Overview CW 40 / 2026 – one column per use case (read top to bottom), "
+               "one KPI per row, sorted by overall status.")
 
 
 if __name__ == "__main__":
