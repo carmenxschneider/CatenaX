@@ -147,7 +147,7 @@ def build():
 
     cols = dict(uc=0.55, st=2.70, ph=4.30, ms=5.48, dim=7.72, sup=11.15, dec=12.50)
     head = [("uc", "Use case"), ("st", "Overall status"), ("ph", "Phase"),
-            ("ms", "Next milestone"), ("dim", "Dimensions"), ("sup", "Supplier Enablement")]
+            ("ms", "Next milestone"), ("dim", "Dimensions"), ("sup", "Suppliers enabled 2026")]
     for key, lbl in head:
         s.text(f"Head {lbl}", cols[key], card_y + 0.12, 1.80, 0.14,
                [[r(lbl.upper(), 7.5, True, INK_STRONG, 51)]])
