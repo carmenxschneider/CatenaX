@@ -64,7 +64,8 @@ BG = "002733"          # Volkswagen Group dark petrol (theme dk2 / accent1)
 ON_DARK = "FFFFFF"     # headline
 ACCENT_LIGHT = "99D1CD"  # theme accent3 (mint): eyebrow and row labels
 ON_DARK_MUTED = "CCD3D6"  # theme accent5: legend text
-TEAL = "008C82"        # theme accent2: date pill
+TEAL = "008C82"        # theme accent2: info panel border and divider
+PANEL = "0B3A45"       # slightly lighter petrol for the info panel
 HEAD_FONT = "The Group HEAD Light"
 
 _FONT_DIR = "/usr/share/fonts/truetype/liberation"
@@ -213,22 +214,26 @@ HEAD_LABELS = ["Name", "Domain Lead"]
 
 # ---------------------------------------------------------------- layout
 def add_frame(s):
-    """VW-style header on the dark background: eyebrow, white Group HEAD headline, date pill, legend."""
+    """VW-style header on the dark background: eyebrow, white Group HEAD headline, info panel (CW + legend)."""
     s.text("Eyebrow", 0.30, 0.26, 6.0, 0.14, [[r("USE CASE PULSE · CATENA-X", 7.5, True, ACCENT_LIGHT, 150)]])
     s.text("Headline", 0.30, 0.44, 9.0, 0.46, [[r("Management Overview of Catena-X Use Cases", 26, False, ON_DARK)]],
            font=HEAD_FONT)
 
-    s.shape("Date Pill", 11.68, 0.28, 1.35, 0.30, "roundRect", 50000, TEAL)
-    s.text("Date", 11.68, 0.28, 1.35, 0.30, [[r("CW 40 / 2026", 10, True, "FFFFFF")]], algn="ctr")
+    # Calendar week + status legend grouped in one panel (style of the Catena-X use case overview tiles)
+    px, py, pw, ph = 8.45, 0.24, 4.58, 0.66
+    s.shape("Info Panel", px, py, pw, ph, "roundRect", 14000, PANEL, TEAL, 9525)
+    s.text("Panel Label", px + 0.18, py + 0.11, 1.25, 0.16, [[r("Status as of", F, False, ACCENT_LIGHT)]], anchor="t")
+    s.text("Panel CW", px + 0.18, py + 0.30, 1.25, 0.24, [[r("CW 40 / 2026", 12, True, ON_DARK)]], anchor="t")
+    s.shape("Panel Divider", px + 1.42, py + 0.14, 0.008, ph - 0.28, fill=TEAL)
 
-    legend = [("On Track", ON_TRACK), ("Problem Solving", PROBLEM), ("Escalation needed", ESCALATION),
-              ("Not Started", NOT_STARTED)]
-    widths = [0.15 + text_w(lbl, F) + 0.25 for lbl, _ in legend]
-    x = 13.03 - sum(widths) + 0.25
-    for (lbl, col), lw in zip(legend, widths):
-        s.shape(f"Legend Dot {lbl}", x, 0.745, 0.09, 0.09, "ellipse", fill=col)
-        s.text(f"Legend {lbl}", x + 0.15, 0.71, lw - 0.15, 0.16, [[r(lbl, F, False, ON_DARK_MUTED)]], wrap=False)
-        x += lw
+    legend = [("On Track", ON_TRACK), ("Problem Solving", PROBLEM),        # column 1
+              ("Escalation needed", ESCALATION), ("Not Started", NOT_STARTED)]  # column 2
+    for i, (lbl, col) in enumerate(legend):
+        lx = px + 1.62 + (i // 2) * 1.40
+        ly = py + 0.13 + (i % 2) * 0.24
+        s.shape(f"Legend Dot {lbl}", lx, ly + 0.035, 0.09, 0.09, "ellipse", fill=col)
+        s.text(f"Legend {lbl}", lx + 0.16, ly, 1.22, 0.16, [[r(lbl, F, False, ON_DARK_MUTED)]], anchor="t",
+               wrap=False)
 
 
 def build():
