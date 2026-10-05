@@ -86,7 +86,7 @@ class Slide:
             f'{fill_xml}{ln}<a:effectLst/></p:spPr>'
             f'<p:txBody><a:bodyPr rtlCol="0" anchor="ctr"/><a:lstStyle/><a:p><a:endParaRPr lang="de-DE"/></a:p></p:txBody></p:sp>')
 
-    def text(self, name, x, y, w, h, runs, anchor="ctr", algn="l", wrap=True, line_pts=None):
+    def text(self, name, x, y, w, h, runs, anchor="ctr", algn="l", wrap=True, line_pts=None, font=FONT):
         """runs: list of paragraphs, each a list of (text, size_pt, bold, color, spacing, italic)."""
         paras = []
         for para in runs:
@@ -95,9 +95,9 @@ class Slide:
                 f'<a:r><a:rPr lang="de-DE" sz="{int(sz * 100)}" b="{1 if b else 0}"{ITALIC if it else ""} kern="0"'
                 f'{f" spc={chr(34)}{spc}{chr(34)}" if spc else ""} dirty="0">'
                 f'<a:solidFill><a:srgbClr val="{c}"/></a:solidFill>'
-                f'<a:latin typeface="{FONT}" pitchFamily="34" charset="0"/>'
-                f'<a:ea typeface="{FONT}" pitchFamily="34" charset="-122"/>'
-                f'<a:cs typeface="{FONT}" pitchFamily="34" charset="-120"/></a:rPr>'
+                f'<a:latin typeface="{font}" pitchFamily="34" charset="0"/>'
+                f'<a:ea typeface="{font}" pitchFamily="34" charset="-122"/>'
+                f'<a:cs typeface="{font}" pitchFamily="34" charset="-120"/></a:rPr>'
                 f'<a:t>{escape(t)}</a:t></a:r>'
                 for t, sz, b, c, spc, it in para)
             paras.append(f'<a:p><a:pPr marL="0" indent="0" algn="{algn}">{lnspc}<a:buNone/></a:pPr>{rs}</a:p>')
@@ -237,14 +237,21 @@ def build():
     return s
 
 
-def write_pptx(shapes, output, notes_text, template=TEMPLATE):
-    """Write the template package with its slide content replaced by `shapes`."""
+def set_bg(slide_xml, color):
+    """Replace the solid slide background colour."""
+    return re.sub(r'(<p:bg><p:bgPr><a:solidFill><a:srgbClr val=")[0-9A-Fa-f]{6}', rf"\g<1>{color}", slide_xml, count=1)
+
+
+def write_pptx(shapes, output, notes_text, template=TEMPLATE, bg=None):
+    """Write the template package with its slide content replaced by `shapes` (and optionally a new bg colour)."""
     zin = zipfile.ZipFile(template)
     slide = zin.read("ppt/slides/slide1.xml").decode("utf8")
     # Keep group header + hidden think-cell frame, replace every visible shape
     head_end = slide.index("</p:graphicFrame>") + len("</p:graphicFrame>")
     tail_start = slide.rindex("</p:spTree>")
     slide = slide[:head_end] + "".join(shapes) + slide[tail_start:]
+    if bg:
+        slide = set_bg(slide, bg)
 
     notes = zin.read("ppt/notesSlides/notesSlide1.xml").decode("utf8")
     notes = re.sub(r"<a:t>Vorlage für Confluence[^<]*</a:t>",

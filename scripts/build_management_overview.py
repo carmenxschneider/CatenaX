@@ -1,7 +1,8 @@
 """Build the "Use Case Pulse – Management Overview" slide.
 
-One white card per use case (read top to bottom), one KPI per row. Uses the
-same template, colours and shape vocabulary as the PULSE single slides.
+One white card per use case (read top to bottom), one KPI per row, on the VW
+dark petrol background. Cards keep the colours and shape vocabulary of the
+PULSE single slides.
 
 Row heights are computed from the actual text: every string is wrapped with
 Liberation Sans (Arial) metrics plus a 7 % margin for Segoe UI, so a layout
@@ -16,26 +17,28 @@ import sys
 from PIL import ImageFont
 
 from build_overview import (
-    BORDER, COMPLETED, DECISIONS, DIM_NAMES, DOT, FAINT, INK, INK_STRONG, MUTED, STATUS, TEMPLATE, USE_CASES,
-    Slide, add_header, r, write_pptx,
+    BORDER, COMPLETED, DECISIONS, DIM_NAMES, DOT, ESCALATION, FAINT, INK, INK_STRONG, MUTED, NOT_STARTED,
+    ON_TRACK, PROBLEM, STATUS, TEMPLATE, USE_CASES, Slide, r, write_pptx,
 )
 
 TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else TEMPLATE
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW40_26.pptx"
 
 # ---------------------------------------------------------------- data
-# Per use case: lower-case abbreviation, Domain Lead, E2E go-live target date.
-# TODO: Domain Leads and next critical milestones of the first seven use cases are still to be taken
-#       from their CW 40 PULSE decks; until then "tbd" and the previous next milestone are shown.
+# Per use case: lower-case abbreviation, Domain Lead (surname + department), E2E go-live target date.
+# Domain Leads from the Catena-X use case overview (PURIS = "Capacity & Bottleneck Mgmt.",
+# Product Passes = "Product Passports"; Battery Passport not listed yet).
+# TODO: next critical milestones of the first seven use cases still to be taken from their PULSE decks;
+#       until then the previous next milestone is shown.
 MANAGEMENT = {
-    "Quality": dict(abbr="quality-cx", dl="tbd", go_live=("MVP Jan '27", "Scaling until 2030")),
+    "Quality": dict(abbr="quality-cx", dl="Kutritz (K-GQY)", go_live=("MVP Jan '27", "Scaling until 2030")),
     "Battery Passport": dict(abbr="battpass-cx", dl="tbd", go_live=("Feb 2027", None)),
-    "Product Passes": dict(abbr="pass-cx", dl="tbd", go_live=None, go_live_note="not defined yet"),
-    "PURIS": dict(abbr="puris-cx", dl="tbd", go_live=None, go_live_note="not specified"),
-    "Business Partner Data Mgmt": dict(abbr="bpdm-cx", dl="tbd", go_live=("Feb 2027", None)),
-    "Certificate Management": dict(abbr="cert-mgmt", dl="tbd", go_live=("May 2028", None)),
-    "Product Carbon Footprint": dict(abbr="pcf-cx", dl="tbd", go_live=("01 Jan 2028", None)),
-    "N-Tier": dict(abbr="ntier-cx", dl="Markus Fink (BZI2)", go_live=None, go_live_note="not defined yet"),
+    "Product Passes": dict(abbr="pass-cx", dl="Drobir (K-GEP)", go_live=None, go_live_note="not defined yet"),
+    "PURIS": dict(abbr="puris-cx", dl="Timpe (KL-GP), Behrens (BZ-PX)", go_live=None, go_live_note="not specified"),
+    "Business Partner Data Mgmt": dict(abbr="bpdm-cx", dl="Fehlner (I/BZ-P)", go_live=("Feb 2027", None)),
+    "Certificate Management": dict(abbr="cert-mgmt", dl="Poetsch (K-DDX/5)", go_live=("May 2028", None)),
+    "Product Carbon Footprint": dict(abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", go_live=("01 Jan 2028", None)),
+    "N-Tier": dict(abbr="ntier-cx", dl="Fink (BZI2)", go_live=None, go_live_note="not defined yet"),
 }
 
 # N-Tier, from Template_UseCase_PULSE_Meeting_Update_1.pptx, slide CW 40 / 2026
@@ -50,11 +53,19 @@ N_TIER = dict(
 COLUMNS = USE_CASES + [N_TIER]
 
 # ---------------------------------------------------------------- typography
-F = 10          # one size for every value, label and secondary line
+F = 9           # one size for every card value, secondary line and row label
 F_NAME = 11     # use case name
-F_PILL = 9      # status pill: "Escalation needed" does not fit an 8-column card at 10 pt
-LH = 11.5 / 72  # line height (inch) of 10 pt text with 11.5 pt line spacing
-LH_NAME = 12.5 / 72
+F_PILL = 8      # status pill text
+LH = 11.5 / 72  # line height (inch) of 9 pt text with 11.5 pt line spacing
+LH_NAME = 13 / 72
+
+# VW corporate frame around the cards
+BG = "002733"          # Volkswagen Group dark petrol (theme dk2 / accent1)
+ON_DARK = "FFFFFF"     # headline
+ACCENT_LIGHT = "99D1CD"  # theme accent3 (mint): eyebrow and row labels
+ON_DARK_MUTED = "CCD3D6"  # theme accent5: legend text
+TEAL = "008C82"        # theme accent2: date pill
+HEAD_FONT = "The Group HEAD Light"
 
 _FONT_DIR = "/usr/share/fonts/truetype/liberation"
 SEGOE_FACTOR = 1.07  # Segoe UI runs up to ~7 % wider than Arial
@@ -90,7 +101,7 @@ def hanging(shape_xml, first_line_indent):
 
 
 # ---------------------------------------------------------------- cells
-DOT_W = 0.12  # dot + gap before a dotted label
+DOT_W = 0.15  # dot + gap before a dotted label
 DIM_LINES = {"External · CX Association": ["External ·", "CX Association"]}  # break after the dot
 
 
@@ -106,12 +117,12 @@ def cell(key, uc, w):
     if key == "status":
         lbl, fill, fg = STATUS[uc["status"]]
 
-        pw = min(w, text_w(lbl, F_PILL, bold=True) + 0.20)
+        pw = min(w, text_w(lbl, F_PILL, bold=True) + 0.22)
 
         def draw(s, x, top):
-            s.shape(f"{n} Status Pill", x, top - 0.02, pw, 0.23, "roundRect", 50000, fill)
-            s.text(f"{n} Status Text", x, top - 0.02, pw, 0.23, [[r(lbl, F_PILL, True, fg)]], algn="ctr", wrap=False)
-        return 0.22, draw
+            s.shape(f"{n} Status Pill", x, top - 0.025, pw, 0.21, "roundRect", 50000, fill)
+            s.text(f"{n} Status Text", x, top - 0.025, pw, 0.21, [[r(lbl, F_PILL, True, fg)]], algn="ctr", wrap=False)
+        return 0.18, draw
 
     if key == "phase":
         k = n_lines(uc["phase"], F, w)
@@ -150,7 +161,7 @@ def cell(key, uc, w):
         k = n_lines(ms_name, F, w - DOT_W) + n_lines(ms_date, F, w - DOT_W)
 
         def draw(s, x, top):
-            s.shape(f"{n} Milestone Dot", x, top + 0.045, 0.09, 0.09, "ellipse", fill=DOT[st])
+            s.shape(f"{n} Milestone Dot", x, top + 0.04, 0.08, 0.08, "ellipse", fill=DOT[st])
             para_box(s, f"{n} Milestone", x + DOT_W, top, w - DOT_W, k,
                      [[r(ms_name, F, False, INK)], [r(ms_date, F, False, MUTED)]])
         return k * LH, draw
@@ -160,12 +171,12 @@ def cell(key, uc, w):
                  for dim, st in list(zip(DIM_NAMES, uc["dims"])) + [("Supplier Activation", uc["sa"])]]
         items = [(dim, lines, st, sum(n_lines(t, F, w - DOT_W) for t in lines)) for dim, (lines, st) in
                  zip([d for d in DIM_NAMES] + ["Supplier Activation"], items)]
-        gap = 0.035
+        gap = 0.05
 
         def draw(s, x, top):
             y = top
             for dim, lines, st, k in items:
-                s.shape(f"{n} Dim Dot {dim}", x, y + 0.045, 0.09, 0.09, "ellipse", fill=DOT[st])
+                s.shape(f"{n} Dim Dot {dim}", x, y + 0.04, 0.08, 0.08, "ellipse", fill=DOT[st])
                 para_box(s, f"{n} Dim {dim}", x + DOT_W, y, w - DOT_W, k, [[r(t, F, False, INK)] for t in lines])
                 y += k * LH + gap
         return sum(k for *_, k in items) * LH + gap * (len(items) - 1), draw
@@ -175,7 +186,7 @@ def cell(key, uc, w):
             return LH, lambda s, x, top: para_box(s, f"{n} Decision None", x, top, w, 1, [[r("–", F, False, FAINT)]])
         num = uc["decision"]
         question = DECISIONS[num - 1][1]
-        flag, indent = 0.17, 0.23
+        flag, indent = 0.16, 0.22
         k = n_lines(question, F, w, indent=indent)
 
         def draw(s, x, top):
@@ -197,29 +208,48 @@ ROWS = [
     ("dims", "Dimensions"),
     ("dec", "Decision required"),
 ]
-HEAD_LABELS = ["Use case name", "Abbreviation", "Domain Lead"]
+HEAD_LABELS = ["Name", "Domain Lead"]
 
 
 # ---------------------------------------------------------------- layout
+def add_frame(s):
+    """VW-style header on the dark background: eyebrow, white Group HEAD headline, date pill, legend."""
+    s.text("Eyebrow", 0.30, 0.26, 6.0, 0.14, [[r("USE CASE PULSE · CATENA-X", 7.5, True, ACCENT_LIGHT, 150)]])
+    s.text("Headline", 0.30, 0.44, 9.0, 0.46, [[r("Management Overview of Catena-X Use Cases", 26, False, ON_DARK)]],
+           font=HEAD_FONT)
+
+    s.shape("Date Pill", 11.68, 0.28, 1.35, 0.30, "roundRect", 50000, TEAL)
+    s.text("Date", 11.68, 0.28, 1.35, 0.30, [[r("CW 40 / 2026", 10, True, "FFFFFF")]], algn="ctr")
+
+    legend = [("On Track", ON_TRACK), ("Problem Solving", PROBLEM), ("Escalation needed", ESCALATION),
+              ("Not Started", NOT_STARTED)]
+    widths = [0.15 + text_w(lbl, F) + 0.25 for lbl, _ in legend]
+    x = 13.03 - sum(widths) + 0.25
+    for (lbl, col), lw in zip(legend, widths):
+        s.shape(f"Legend Dot {lbl}", x, 0.745, 0.09, 0.09, "ellipse", fill=col)
+        s.text(f"Legend {lbl}", x + 0.15, 0.71, lw - 0.15, 0.16, [[r(lbl, F, False, ON_DARK_MUTED)]], wrap=False)
+        x += lw
+
+
 def build():
     s = Slide()
-    add_header(s, "Management Overview", "Management report on the status of all Catena-X use cases")
+    add_frame(s)
 
     top_y, bottom_y = 1.07, 7.30
-    label_x, label_w = 0.25, 0.90
-    col_x0, col_x1, gap = 1.22, 13.08, 0.045
+    label_x, label_w = 0.30, 0.95
+    col_x0, col_x1, gap = 1.30, 13.03, 0.045
     cw = (col_x1 - col_x0 - gap * (len(COLUMNS) - 1)) / len(COLUMNS)
-    pad = 0.05
+    pad = 0.075
     w = cw - 2 * pad
-    pad_top, pad_bottom = 0.065, 0.06
+    pad_top, pad_bottom = 0.07, 0.06
 
-    # Header block, top-aligned: name (slot for the longest name), abbreviation, Domain Lead, status bar
+    # Header block, top-aligned: name with the abbreviation directly below it, then Domain Lead
+    # (aligned across cards and with its label) and the status bar
     name_lines = max(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in COLUMNS)  # Segoe UI Bold ≈ Arial Bold
     dl_lines = max(n_lines(MANAGEMENT[uc["name"]]["dl"], F, w) for uc in COLUMNS)
-    y_name = top_y + 0.10
-    y_abbr = y_name + name_lines * LH_NAME + 0.04
-    y_dl = y_abbr + LH + 0.02
-    y_bar = y_dl + dl_lines * LH + 0.08
+    y_name = top_y + 0.11
+    y_dl = y_name + name_lines * LH_NAME + 0.02 + LH + 0.06
+    y_bar = y_dl + dl_lines * LH + 0.09
     rows_top = y_bar + 0.10
 
     # Each row is as tall as its tallest cell (or its label)
@@ -237,23 +267,24 @@ def build():
         x = cx + pad
         n = uc["name"]
         m = MANAGEMENT[n]
-        s.shape(f"Col {n} Card", cx, top_y, cw, bottom_y - top_y, "roundRect", 4500, "FFFFFF", BORDER)
+        s.shape(f"Col {n} Card", cx, top_y, cw, bottom_y - top_y, "roundRect", 4000, "FFFFFF")
         s.text(f"Col {n} Name", x, y_name, w, name_lines * LH_NAME + 0.02, [[r(n, F_NAME, True, INK_STRONG)]],
-               anchor="t", line_pts=1250)
+               anchor="t", line_pts=1300)
+        y_abbr = y_name + n_lines(n, F_NAME, w * SEGOE_FACTOR, bold=True) * LH_NAME + 0.02
         para_box(s, f"Col {n} Abbr", x, y_abbr, w, 1, [[r(m["abbr"], F, False, MUTED)]])
         para_box(s, f"Col {n} Domain Lead", x, y_dl, w, dl_lines,
                  [[r(m["dl"], F, False, FAINT if m["dl"] == "tbd" else INK)]])
         s.shape(f"Col {n} Status Bar", x, y_bar, w, 0.04, "roundRect", 50000, STATUS[uc["status"]][1])
 
-    # Left column: header labels aligned with name / abbreviation / Domain Lead
-    for label, y in zip(HEAD_LABELS, (y_name + 0.015, y_abbr, y_dl)):
-        para_box(s, f"Head Label {label}", label_x, y, label_w, 1, [[r(label, F, True, MUTED)]])
+    # Left column on the dark background: labels aligned with name / Domain Lead and with each row
+    for label, y in zip(HEAD_LABELS, (y_name + 0.03, y_dl)):
+        para_box(s, f"Head Label {label}", label_x, y, label_w, 1, [[r(label, F, True, ACCENT_LIGHT)]])
 
     y = rows_top
     for key, label in ROWS:
         h = heights[key]
         top = y + pad_top
-        s.text(f"Row Label {label}", label_x, top, label_w, h - pad_top, [[r(label, F, True, MUTED)]],
+        s.text(f"Row Label {label}", label_x, top, label_w, h - pad_top, [[r(label, F, True, ACCENT_LIGHT)]],
                anchor="t", line_pts=1150)
         for c, uc in enumerate(COLUMNS):
             x = col_x0 + c * (cw + gap) + pad
@@ -267,7 +298,7 @@ def build():
 def main():
     write_pptx(build().shapes, OUTPUT,
                "Use Case Pulse Management Overview CW 40 / 2026 – one card per use case (read top to bottom), "
-               "sorted by overall status. Next critical milestone = most critical amber/red milestone.")
+               "sorted by overall status. Next critical milestone = most critical amber/red milestone.", bg=BG)
 
 
 if __name__ == "__main__":

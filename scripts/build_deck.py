@@ -36,7 +36,9 @@ def main():
 
     # Slide 1 keeps the template's hidden think-cell frame; slide 2 gets no OLE parts of its own
     slide1 = slide[:head_end] + "".join(build_overview.build().shapes) + slide[tail_start:]
-    slide2 = (slide[:graphic_start] + "".join(build_management_overview.build().shapes) + slide[tail_start:])
+    slide2 = build_overview.set_bg(
+        slide[:graphic_start] + "".join(build_management_overview.build().shapes) + slide[tail_start:],
+        build_management_overview.BG)
 
     layout = re.search(r'Target="(\.\./slideLayouts/[^"]+)"', read("ppt/slides/_rels/slide1.xml.rels")).group(1)
     slide2_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
