@@ -39,7 +39,7 @@ USE_CASES = [
     dict(name="Quality", abbr="quality-cx", status="esc", phase="Piloting",
          ms=("ps", "Domain expertise aligned", "30 Sep 2026"),
          dims=["ok", "ps", "ps", "ps"], sa="ps", sup=(0, 1), note="rescoped", decision=1),
-    dict(name="Battery Passport", abbr="Batt Pass", status="ps", phase="Pilot",
+    dict(name="Battery Passport", abbr="Batt Pass", status="ps", phase="Piloting",
          ms=("ok", "Tech requirements done", "31 Oct 2026"),
          dims=["ps", "ps", "ok", "ok"], sa="ok", sup=(0, 1)),
     dict(name="Product Passes", abbr="pass-cx", status="ps", phase="Definition",
