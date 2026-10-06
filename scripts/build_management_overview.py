@@ -80,7 +80,7 @@ BG = "002733"          # Volkswagen Group dark petrol (theme dk2 / accent1)
 ON_DARK = "FFFFFF"     # headline
 ACCENT_LIGHT = "99D1CD"  # theme accent3 (mint): eyebrow and row labels
 ON_DARK_MUTED = "CCD3D6"  # theme accent5: legend text
-TEAL = "008C82"        # theme accent2: info panel border and divider
+TEAL = "008C82"        # theme accent2: info panel divider
 PANEL = "0B3A45"       # slightly lighter petrol for the info panel
 HEAD_FONT = "The Group HEAD Light"
 
@@ -233,21 +233,27 @@ def add_frame(s):
     s.text("Headline", 0.30, 0.44, 9.0, 0.46, [[r("Management Overview of Catena-X Use Cases", 26, False, ON_DARK)]],
            font=HEAD_FONT)
 
-    # Calendar week + status legend grouped in one panel (style of the Catena-X use case overview tiles)
-    px, py, pw, ph = 8.45, 0.24, 4.58, 0.66
-    s.shape("Info Panel", px, py, pw, ph, "roundRect", 14000, PANEL, TEAL, 9525)
-    s.text("Panel Label", px + 0.18, py + 0.11, 1.25, 0.16, [[r("Status as of", F, False, ACCENT_LIGHT)]], anchor="t")
-    s.text("Panel CW", px + 0.18, py + 0.30, 1.25, 0.24, [[r(CW, 12, True, ON_DARK)]], anchor="t")
-    s.shape("Panel Divider", px + 1.42, py + 0.14, 0.008, ph - 0.28, fill=TEAL)
-
+    # Calendar week + status legend: one compact, quiet panel at the top right (no border, slightly lighter petrol)
+    f_leg = 8
     legend = [("On Track", ON_TRACK), ("Problem Solving", PROBLEM),        # column 1
               ("Escalation needed", ESCALATION), ("Not Started", NOT_STARTED)]  # column 2
+    col_w = [0.14 + max(text_w(lbl, f_leg) for lbl, _ in legend[i:i + 2]) + 0.04 for i in (0, 2)]
+    cw_w = max(text_w(CW, 10, bold=True), text_w("Status as of", 7.5)) + 0.04
+    pad, gap = 0.14, 0.16
+    pw = pad + cw_w + gap + 0.008 + gap + col_w[0] + 0.12 + col_w[1] + pad
+    ph, py = 0.50, 0.30
+    px = 13.03 - pw
+    s.shape("Info Panel", px, py, pw, ph, "roundRect", 18000, PANEL)
+    s.text("Panel Label", px + pad, py + 0.07, cw_w, 0.14, [[r("Status as of", 7.5, False, ACCENT_LIGHT)]], anchor="t")
+    s.text("Panel CW", px + pad, py + 0.23, cw_w, 0.20, [[r(CW, 10, True, ON_DARK)]], anchor="t")
+    dx = px + pad + cw_w + gap
+    s.shape("Panel Divider", dx, py + 0.10, 0.008, ph - 0.20, fill=TEAL)
     for i, (lbl, col) in enumerate(legend):
-        lx = px + 1.62 + (i // 2) * 1.40
-        ly = py + 0.13 + (i % 2) * 0.24
-        s.shape(f"Legend Dot {lbl}", lx, ly + 0.035, 0.09, 0.09, "ellipse", fill=col)
-        s.text(f"Legend {lbl}", lx + 0.16, ly, 1.22, 0.16, [[r(lbl, F, False, ON_DARK_MUTED)]], anchor="t",
-               wrap=False)
+        lx = dx + 0.008 + gap + (0 if i < 2 else col_w[0] + 0.12)
+        ly = py + 0.08 + (i % 2) * 0.18
+        s.shape(f"Legend Dot {lbl}", lx, ly + 0.035, 0.075, 0.075, "ellipse", fill=col)
+        s.text(f"Legend {lbl}", lx + 0.14, ly, col_w[i // 2] - 0.14, 0.15, [[r(lbl, f_leg, False, ON_DARK_MUTED)]],
+               anchor="t", wrap=False)
 
 
 def build():
