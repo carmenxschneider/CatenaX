@@ -150,10 +150,12 @@ def cell(key, uc, w, board):
         return k * LH, lambda s, x, top: para_box(s, f"{n} Goal", x, top, w, k, [[r(uc["goal"], F, False, INK)]])
 
     if key == "kpi":
-        if uc.get("kpi"):
-            title, value = uc["kpi"]
-            paras = [[r(title, F, False, MUTED)], [r(value, F, False, INK)]]
-            k = n_lines(title, F, w) + n_lines(value, F, w)
+        if uc.get("kpi"):  # (title, actual, target); actual None = not reported yet
+            title, actual, target = uc["kpi"]
+            value = [r(actual, F, True, COMPLETED) if actual else r("tbd", F, False, FAINT, None, True),
+                     r(f" / {target}", F, False, INK)]
+            paras = [[r(title, F, False, MUTED)], value]
+            k = n_lines(title, F, w) + n_lines((actual or "tbd") + f" / {target}", F, w)
         else:
             paras = [[r("–  ", F, False, FAINT), r(GO_LIVE_MISSING, F, False, FAINT, None, True)]]
             k = n_lines("–  " + GO_LIVE_MISSING, F, w)
@@ -233,7 +235,7 @@ HEAD_LABELS = ["Name", "Domain Lead"]
 
 USE_CASE_BOARD = dict(
     eyebrow="USE CASE PULSE · CATENA-X",
-    title="Management Overview of Catena-X Use Cases",
+    title="Management Overview of Use Cases",
     columns=COLUMNS,
     dims=USE_CASE_DIMS,
     rows=[

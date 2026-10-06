@@ -19,41 +19,44 @@ ENABLING_DIMS = ["External · CX Association", "Business", "Use Cases", "Technic
 
 # CW 41 / 2026 Enabling Pulse slides. Content in short business English, abbreviations lower case.
 # ms = next critical milestone (red before amber, then earliest; Portfolio: Secure PR74 as agreed);
-# None = no amber/red milestone. kpi = (KPI title, value) taken from the "KPIs (defined per area)" box.
+# None = no amber/red milestone. kpi = (KPI title, actual, target) from the "KPIs (defined per area)" box;
+# actual None = not reported in the source slide (shown as "tbd").
 COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
     dict(name="Supplier Activation", abbr="sac-cx", dl="Behrens (BZ-PX)", status="esc",
          goal="All P-Mat suppliers operationally connected",
-         kpi=("Contracts by end of Q3 2026", "240 of 280 suppliers"),
+         kpi=("Suppliers contracted by Q3", "240", "280"),
          sup=(240, 400), sup_pct=55, sup_note="228 company groups",
          ms=("esc", "280 suppliers contracted", "30 Sep 2026"),
-         dims=["esc", "ps", "ns", "ns"]),
+         dims=["esc", "ps", "ns", "ns"],
+         decisions=[(1, "Red: Cofinity-X processes and portal unclear for suppliers; "
+                        "DSA confirmation costs per use case open")]),
     dict(name="Portfolio, AI+, C-X NEXT, DigiTrace", abbr="port-cx", dl="Bollmann, Poetsch (K-DDX/5)", status="esc",
          goal="Budget and funding secured in every planning round",
-         kpi=("PR74 benefit / costs", "~650 T€ / ~340 T€"),
+         kpi=("PR74 & PR75 secured", None, "2 by 31 Dec 2026"),
          sup=None, sup_text="–",
          ms=("esc", "Secure PR74", "Nov 2026"),
          dims=["ok", "ps", "ps", "ok"],
-         decisions=[(1, "PR75: which costs are planned per use case?"),
-                    (2, "New PR75 process: capacity crunch & high risks?"),
-                    (3, "DigiTrace: stop, or fund for 2027?")]),
+         decisions=[(2, "PR75: which costs are planned per use case?"),
+                    (3, "New PR75 process: capacity crunch & high risks?"),
+                    (4, "DigiTrace: stop, or fund for 2027?")]),
     dict(name="Data Provisioning", abbr="dpr-cx", dl="Bollmann, Poetsch (K-DDX/5)", status="ps",
-         goal="CX data provided operationally as shoppable products",
-         kpi=("Use Case Owners", "6 named & approved"),
+         goal="Catena-X data provided as shoppable data products",
+         kpi=("Use Case Owners approved", "6", "8"),
          sup=None, sup_text="–", ms=None,
          dims=["ok", "ok", "ps", "ns"]),
     dict(name="Hub & Spoke", abbr="hub-cx", dl="Bollmann, Poetsch (K-DDX/5)", status="ps",
          goal="Catena-X scaled across all brands via Hub & Spoke",
-         kpi=("Brands connected", "8 of 17 signed"),
+         kpi=("Brands signed", "8", "17"),
          sup=None, sup_text="–",
          ms=("ps", "Framework agreements signed", "31 Dec 2026"),
          dims=["ok", "ps", "ns", "ns"]),
-    dict(name="Legal & Contracts", abbr="gis-cx", dl="Pietschmann", status="ps",
-         goal="Framework contracts for brands and data consumers",
-         kpi=("Automated contract cycle", "Target 01 Jan 2028"),
+    dict(name="Legal & Contracts", abbr="gis-cx", dl="Pietschmann", status="ps",  # Domain Lead to be confirmed
+         goal="Framework contracts with brands and data consumers in place",
+         kpi=("Automated contract cycle live", None, "01 Jan 2028"),
          sup=None, sup_text="–",
          ms=("ps", "Managed by Cofinity-X", "Oct 2026"),
          dims=["ok", "ps", "ok", "ps"]),
-    dict(name="Architecture", abbr="arch-cx", dl="Fischer", status="ps",
+    dict(name="Architecture", abbr="arch-cx", dl="tbd", status="ps",  # Fischer is Workstream Manager
          goal="Approved, scalable Catena-X target architecture",
          kpi=None,
          sup=None, sup_text="–", ms=None,
@@ -69,7 +72,7 @@ ENABLING_BOARD = dict(
     rows=[
         ("status", "Overall status"),
         ("goal", "Goal"),
-        ("kpi", "Key KPI"),
+        ("kpi", "Key KPI actual / target"),
         ("sup", "Suppliers enabled 2026"),
         ("ms", "Next critical milestone"),
         ("dims", "Dimensions"),
