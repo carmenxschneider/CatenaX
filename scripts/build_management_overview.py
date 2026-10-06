@@ -284,8 +284,8 @@ def add_frame(s, board):
 
 GRID = dict(top_y=1.07, bottom_y=7.30, label_x=0.30, label_w=0.95, col_x0=1.30, col_x1=13.03, gap=0.045,
             pad=0.075, pad_top=0.07, pad_bottom=0.06)
-# Share of leftover height per row position: more air for rows 3-5, Decision required only moves down
-SPARE_WEIGHTS = [0.5, 1, 2, 2, 2, 1, 0]
+# Leftover height: top row / middle band / dimensions / decisions. Decision required only moves down.
+SPARE_SHARE = dict(top=0.5, middle=7, dims=1, dec=0)
 
 
 def card_width(board):
@@ -303,28 +303,45 @@ def label_runs(label):
 
 
 def compute_layout(boards):
-    """One vertical grid for all boards, so every row sits at the same height on every slide."""
+    """One vertical grid for all boards.
+
+    The first row (overall status) and the last two rows (dimensions, decisions) sit at the same height on
+    every slide. The rows in between share the band between them, so a board with fewer middle rows gets
+    more air instead of a gap.
+    """
     name_lines = dl_lines = 1
-    n_rows = len(boards[0]["rows"])
-    heights = [0.0] * n_rows
+    content = {}
     for board in boards:
         _, w = card_width(board)
         cols = board["columns"]
         name_lines = max(name_lines, *(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in cols))
         dl_lines = max(dl_lines, *(n_lines(uc["dl"], F, w) for uc in cols))
-        for i, (key, label) in enumerate(board["rows"]):
-            content = max(max(cell(key, uc, w, board)[0] for uc in cols), label_runs(label)[1] * LH)
-            heights[i] = max(heights[i], GRID["pad_top"] + content + GRID["pad_bottom"])
+        content[board["title"]] = [
+            GRID["pad_top"] + max(max(cell(key, uc, w, board)[0] for uc in cols), label_runs(label)[1] * LH)
+            + GRID["pad_bottom"] for key, label in board["rows"]]
 
     y_name = GRID["top_y"] + 0.11
     y_dl = y_name + name_lines * LH_NAME + 0.02 + LH + 0.06  # name slot, abbreviation, gap
     y_bar = y_dl + dl_lines * LH + 0.09
     rows_top = y_bar + 0.10
-    spare = (GRID["bottom_y"] - 0.06) - (rows_top + sum(heights))
+
+    top = max(h[0] for h in content.values())
+    middle = max(sum(h[1:-2]) for h in content.values())
+    dims = max(h[-2] for h in content.values())
+    dec = max(h[-1] for h in content.values())
+    spare = (GRID["bottom_y"] - 0.06) - (rows_top + top + middle + dims + dec)
     if spare < 0:
         print(f"WARNING: content is {-spare:.2f} in taller than the slide", file=sys.stderr)
-    weights = SPARE_WEIGHTS[:n_rows]
-    heights = [h + max(spare, 0) * wt / sum(weights) for h, wt in zip(heights, weights)]
+    share = {k: max(spare, 0) * v / sum(SPARE_SHARE.values()) for k, v in SPARE_SHARE.items()}
+    top, middle, dims, dec = top + share["top"], middle + share["middle"], dims + share["dims"], dec + share["dec"]
+
+    heights = {}
+    for title, h in content.items():
+        mids = h[1:-2]
+        weights = [1] + [2] * (len(mids) - 1)  # first middle row (phase / goal) gets less extra air
+        extra = middle - sum(mids)
+        mids = [m + extra * wt / sum(weights) for m, wt in zip(mids, weights)]
+        heights[title] = [top] + mids + [dims, dec]
     return dict(name_lines=name_lines, dl_lines=dl_lines, y_name=y_name, y_dl=y_dl, y_bar=y_bar,
                 rows_top=rows_top, heights=heights)
 
@@ -354,11 +371,11 @@ def build(board=USE_CASE_BOARD, layout=None):
         s.shape(f"Col {n} Status Bar", x, y_bar, w, 0.04, "roundRect", 50000, STATUS[uc["status"]][1])
 
     # Left column on the dark background: labels aligned with name / Domain Lead and with each row
-    for label, y in zip(HEAD_LABELS, (y_name + 0.03, y_dl)):
+    for label, y in zip(board.get("head_labels", HEAD_LABELS), (y_name + 0.03, y_dl)):
         para_box(s, f"Head Label {label}", g["label_x"], y, g["label_w"], 1, [[r(label, F, True, ACCENT_LIGHT)]])
 
     y = layout["rows_top"]
-    for (key, label), h in zip(rows, layout["heights"]):
+    for (key, label), h in zip(rows, layout["heights"][board["title"]]):
         top = y + g["pad_top"]
         paras, _ = label_runs(label)
         title = label if isinstance(label, str) else label[0]
