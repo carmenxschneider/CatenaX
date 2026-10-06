@@ -1,7 +1,7 @@
-"""Build one deck with both overview variants.
+"""Build the Catena-X Pulse management deck.
 
-    slide 1: Use Case Pulse – Overview (one row per use case, build_overview.py)
-    slide 2: Use Case Pulse – Management Overview (one card per use case, build_management_overview.py)
+    slide 1: Management Overview of Catena-X Use Cases (build_management_overview.py)
+    slide 2: Management Overview of Enabling Streams   (build_enabling_overview.py)
 
     python scripts/build_deck.py [output.pptx]
 """
@@ -13,12 +13,13 @@ import zipfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import build_management_overview  # noqa: E402
+import build_enabling_overview  # noqa: E402
+import build_management_overview as mgmt  # noqa: E402
 import build_overview  # noqa: E402
 from xml.sax.saxutils import escape  # noqa: E402
 
 TEMPLATE = "templates/Template_UseCase_PULSE.pptx"
-OUTPUT = sys.argv[1] if len(sys.argv) > 1 else "output/UseCase_Pulse_Overview_Varianten_CW40_26.pptx"
+OUTPUT = sys.argv[1] if len(sys.argv) > 1 else "output/Catena-X_Pulse_Management_Overview_CW41_26.pptx"
 
 SLIDE_CT = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml"
 SLIDE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"
@@ -35,10 +36,11 @@ def main():
     tail_start = slide.rindex("</p:spTree>")
 
     # Slide 1 keeps the template's hidden think-cell frame; slide 2 gets no OLE parts of its own
-    slide1 = slide[:head_end] + "".join(build_overview.build().shapes) + slide[tail_start:]
+    slide1 = build_overview.set_bg(
+        slide[:head_end] + "".join(mgmt.build(mgmt.USE_CASE_BOARD).shapes) + slide[tail_start:], mgmt.BG)
     slide2 = build_overview.set_bg(
-        slide[:graphic_start] + "".join(build_management_overview.build().shapes) + slide[tail_start:],
-        build_management_overview.BG)
+        slide[:graphic_start] + "".join(mgmt.build(build_enabling_overview.ENABLING_BOARD).shapes)
+        + slide[tail_start:], mgmt.BG)
 
     layout = re.search(r'Target="(\.\./slideLayouts/[^"]+)"', read("ppt/slides/_rels/slide1.xml.rels")).group(1)
     slide2_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
@@ -59,9 +61,7 @@ def main():
     app = re.sub(r"<Slides>\d+</Slides>", "<Slides>2</Slides>", read("docProps/app.xml"))
 
     notes = re.sub(r"<a:t>Vorlage für Confluence[^<]*</a:t>",
-                   "<a:t>" + escape("Use Case Pulse CW 40 / 2026 – slide 1: one row per use case; "
-                                    "slide 2: Management Overview, one card per use case (read top to bottom).")
-                   + "</a:t>", read("ppt/notesSlides/notesSlide1.xml"))
+                   "<a:t>" + escape(mgmt.USE_CASE_BOARD["notes"]) + "</a:t>", read("ppt/notesSlides/notesSlide1.xml"))
 
     replace = {
         "ppt/slides/slide1.xml": slide1,

@@ -29,41 +29,42 @@ OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_
 # Content in short business English. Abbreviations lower case.
 # ms = next critical milestone: the most critical amber/red milestone (red before amber, then earliest);
 #      None = the timeline has no amber/red milestone.
-# dims = External · CX Association, Business, Data Provisioning, Technical; sa = Supplier Activation.
+# dims = status per dimension, in the order of USE_CASE_DIMS.
 CW = "CW 41 / 2026"
+USE_CASE_DIMS = DIM_NAMES + ["Supplier Activation"]
 
 COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
     dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="esc", phase="Piloting",
          go_live=("MVP Jan '27", "Scaling until 2030"),
          sup=(0, 2), sup_note="rescoped from 15",
          ms=("esc", "SQA CX MVP scale-up", "31 Jan 2027"),
-         dims=["ok", "ps", "ps", "ps"], sa="ps",
-         decision=(1, "Approve rescoping from 15 to 2 suppliers until the Early Warning Production MVP is live?")),
+         dims=["ok", "ps", "ps", "ps", "ps"],
+         decisions=[(1, "Approve rescoping from 15 to 2 suppliers until the Early Warning Production MVP is live?")]),
     dict(name="Battery Passport", abbr="batt-cx", dl="Alp (ZG-R)", status="ps", phase="Piloting",
          go_live=("Feb 2027", None), sup=(0, 1), ms=None,
-         dims=["ps", "ps", "ok", "ok"], sa="ok"),
+         dims=["ps", "ps", "ok", "ok", "ok"]),
     dict(name="Product Passes", abbr="pass-cx", dl="Drobir (K-GEP-2)", status="ps", phase="Definition & Clarification",
          go_live=None, sup=(0, 1),
          ms=("ps", "Product passes prioritized", "31 Oct 2026"),
-         dims=["ps", "ps", "ok", "ok"], sa="ok"),
+         dims=["ps", "ps", "ok", "ok", "ok"]),
     dict(name="PURIS", abbr="puris-cx", dl="Timpe (KL-GP), Behrens (BZ-PX)", status="ps", phase="Piloting",
          go_live=None, sup=(1, 6),
          ms=("ps", "Plan for existing challenges ready", "9 Oct 2026"),
-         dims=["ok", "ps", "ps", "ps"], sa="ps",
-         decision=(2, "Who decides how and when on the WINGS connectivity rollout roadmap?")),
+         dims=["ok", "ps", "ps", "ps", "ps"],
+         decisions=[(2, "Who decides how and when on the WINGS connectivity rollout roadmap?")]),
     dict(name="Business Partner Data Mgmt", abbr="bpdm-cx", dl="Fehlner (I/BZ)", status="ps", phase="Implementation",
          go_live=("Feb 2027", None), sup=(0, 1), ms=None,
-         dims=["ps", "ps", "ok", "ps"], sa="ns"),
+         dims=["ps", "ps", "ok", "ps", "ns"]),
     dict(name="Certificate Management", abbr="cert-cx", dl="Poetsch (K-DDX/5)", status="ps", phase="Scaling",
          go_live=("May 2028", None), sup=(82, 100),
          ms=("ps", "Official CX CCM release", "Sep 2026"),
-         dims=["ps", "ok", "ok", "ok"], sa="ok"),
+         dims=["ps", "ok", "ok", "ok", "ok"]),
     dict(name="Product Carbon Footprint", abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", status="ok",
          phase="Piloting", go_live=("01 Jan 2028", None), sup=(0, 1), ms=None,
-         dims=["ok", "ok", "ok", "ok"], sa="ok"),
+         dims=["ok", "ok", "ok", "ok", "ok"]),
     dict(name="N-Tier", abbr="ntier-cx", dl="Fink (BZI2)", status="ok", phase="Definition & Clarification",
          go_live=None, sup=None, ms=None,
-         dims=["ok", "ns", "ns", "ns"], sa="ns"),
+         dims=["ok", "ns", "ns", "ns", "ns"]),
 ]
 GO_LIVE_MISSING = "not defined yet"
 
@@ -126,7 +127,7 @@ def para_box(s, name, x, top, w, k, paras):
     s.text(name, x, top, w, k * LH + 0.02, paras, anchor="t", line_pts=1150)
 
 
-def cell(key, uc, w):
+def cell(key, uc, w, board):
     """Return (content height, draw) for one cell; draw(s, x, top) adds the shapes."""
     n = uc["name"]
 
@@ -144,6 +145,20 @@ def cell(key, uc, w):
         k = n_lines(uc["phase"], F, w)
         return k * LH, lambda s, x, top: para_box(s, f"{n} Phase", x, top, w, k, [[r(uc["phase"], F, False, INK)]])
 
+    if key == "goal":
+        k = n_lines(uc["goal"], F, w)
+        return k * LH, lambda s, x, top: para_box(s, f"{n} Goal", x, top, w, k, [[r(uc["goal"], F, False, INK)]])
+
+    if key == "kpi":
+        if uc.get("kpi"):
+            title, value = uc["kpi"]
+            paras = [[r(title, F, False, MUTED)], [r(value, F, False, INK)]]
+            k = n_lines(title, F, w) + n_lines(value, F, w)
+        else:
+            paras = [[r("–  ", F, False, FAINT), r(GO_LIVE_MISSING, F, False, FAINT, None, True)]]
+            k = n_lines("–  " + GO_LIVE_MISSING, F, w)
+        return k * LH, lambda s, x, top: para_box(s, f"{n} KPI", x, top, w, k, paras)
+
     if key == "golive":
         if uc["go_live"]:
             main, second = uc["go_live"]
@@ -156,10 +171,10 @@ def cell(key, uc, w):
 
     if key == "sup":
         if uc["sup"] is None:
-            paras, k = [[r("N/A", F, False, FAINT)]], 1
+            paras, k = [[r(uc.get("sup_text", "N/A"), F, False, FAINT)]], 1
         else:
             done, total = uc["sup"]
-            pct = round(100 * done / total)
+            pct = uc.get("sup_pct", round(100 * done / total))  # as reported, if the source states it
             paras = [[r(f"{done} / {total}", F, True, COMPLETED), r(f"  {pct}%", F, False, MUTED)]]
             k = 1
             if uc.get("sup_note"):
@@ -183,11 +198,9 @@ def cell(key, uc, w):
         return k * LH, draw
 
     if key == "dims":
-        items = [(DIM_LINES.get(dim, [dim]), st)
-                 for dim, st in list(zip(DIM_NAMES, uc["dims"])) + [("Supplier Activation", uc["sa"])]]
-        items = [(dim, lines, st, sum(n_lines(t, F, w - DOT_W) for t in lines)) for dim, (lines, st) in
-                 zip([d for d in DIM_NAMES] + ["Supplier Activation"], items)]
-        gap = 0.05
+        items = [(dim, DIM_LINES.get(dim, [dim]), st) for dim, st in zip(board["dims"], uc["dims"])]
+        items = [(dim, lines, st, sum(n_lines(t, F, w - DOT_W) for t in lines)) for dim, lines, st in items]
+        gap = board.get("dim_gap", 0.05)
 
         def draw(s, x, top):
             y = top
@@ -198,39 +211,50 @@ def cell(key, uc, w):
         return sum(k for *_, k in items) * LH + gap * (len(items) - 1), draw
 
     if key == "dec":
-        if not uc.get("decision"):
+        if not uc.get("decisions"):
             return LH, lambda s, x, top: para_box(s, f"{n} Decision None", x, top, w, 1, [[r("–", F, False, FAINT)]])
-        num, question = uc["decision"]
-        flag, indent = 0.16, 0.22
-        k = n_lines(question, F, w, indent=indent)
+        flag, indent, gap = 0.16, 0.22, 0.08
+        items = [(num, q, n_lines(q, F, w, indent=indent)) for num, q in uc["decisions"]]
 
         def draw(s, x, top):
-            s.shape(f"{n} Decision Flag", x, top, flag, flag, "ellipse", fill=COMPLETED)
-            s.text(f"{n} Decision No", x, top, flag, flag, [[r(str(num), F_PILL, True, "FFFFFF")]], algn="ctr")
-            para_box(s, f"{n} Decision", x, top, w, k, [[r(question, F, False, INK)]])
-            s.shapes[-1] = hanging(s.shapes[-1], indent)
-        return k * LH, draw
+            y = top
+            for num, question, k in items:
+                s.shape(f"{n} Decision {num} Flag", x, y, flag, flag, "ellipse", fill=COMPLETED)
+                s.text(f"{n} Decision {num} No", x, y, flag, flag, [[r(str(num), F_PILL, True, "FFFFFF")]], algn="ctr")
+                para_box(s, f"{n} Decision {num}", x, y, w, k, [[r(question, F, False, INK)]])
+                s.shapes[-1] = hanging(s.shapes[-1], indent)
+                y += k * LH + gap
+        return sum(k for *_, k in items) * LH + gap * (len(items) - 1), draw
 
     raise KeyError(key)
 
 
-ROWS = [
-    ("status", "Overall status"),
-    ("phase", "Phase"),
-    ("golive", "E2E go-live target date"),
-    ("sup", "Suppliers enabled 2026"),
-    ("ms", "Next critical milestone"),
-    ("dims", "Dimensions"),
-    ("dec", "Decision required"),
-]
 HEAD_LABELS = ["Name", "Domain Lead"]
+
+USE_CASE_BOARD = dict(
+    eyebrow="USE CASE PULSE · CATENA-X",
+    title="Management Overview of Catena-X Use Cases",
+    columns=COLUMNS,
+    dims=USE_CASE_DIMS,
+    rows=[
+        ("status", "Overall status"),
+        ("phase", "Phase"),
+        ("golive", "E2E go-live target date"),
+        ("sup", "Suppliers enabled 2026"),
+        ("ms", "Next critical milestone"),
+        ("dims", "Dimensions"),
+        ("dec", "Decision required"),
+    ],
+    notes=f"Use Case Pulse Management Overview {CW} – one card per use case (read top to bottom), "
+          "sorted by overall status. Next critical milestone = most critical amber/red milestone.",
+)
 
 
 # ---------------------------------------------------------------- layout
-def add_frame(s):
+def add_frame(s, board):
     """VW-style header on the dark background: eyebrow, white Group HEAD headline, info panel (CW + legend)."""
-    s.text("Eyebrow", 0.30, 0.26, 6.0, 0.14, [[r("USE CASE PULSE · CATENA-X", 7.5, True, ACCENT_LIGHT, 150)]])
-    s.text("Headline", 0.30, 0.44, 9.0, 0.46, [[r("Management Overview of Catena-X Use Cases", 26, False, ON_DARK)]],
+    s.text("Eyebrow", 0.30, 0.26, 6.0, 0.14, [[r(board["eyebrow"], 7.5, True, ACCENT_LIGHT, 150)]])
+    s.text("Headline", 0.30, 0.44, 9.0, 0.46, [[r(board["title"], 26, False, ON_DARK)]],
            font=HEAD_FONT)
 
     # Calendar week + status legend: one compact, quiet panel at the top right (no border, slightly lighter petrol)
@@ -256,49 +280,49 @@ def add_frame(s):
                anchor="t", wrap=False)
 
 
-def build():
+def build(board=USE_CASE_BOARD):
+    columns, rows = board["columns"], board["rows"]
     s = Slide()
-    add_frame(s)
+    add_frame(s, board)
 
     top_y, bottom_y = 1.07, 7.30
     label_x, label_w = 0.30, 0.95
     col_x0, col_x1, gap = 1.30, 13.03, 0.045
-    cw = (col_x1 - col_x0 - gap * (len(COLUMNS) - 1)) / len(COLUMNS)
+    cw = (col_x1 - col_x0 - gap * (len(columns) - 1)) / len(columns)
     pad = 0.075
     w = cw - 2 * pad
     pad_top, pad_bottom = 0.07, 0.06
 
     # Header block, top-aligned: name with the abbreviation directly below it, then Domain Lead
     # (aligned across cards and with its label) and the status bar
-    name_lines = max(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in COLUMNS)  # Segoe UI Bold ≈ Arial Bold
-    dl_lines = max(n_lines(uc["dl"], F, w) for uc in COLUMNS)
+    name_lines = max(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in columns)  # Segoe UI Bold ≈ Arial Bold
+    dl_lines = max(n_lines(uc["dl"], F, w) for uc in columns)
     y_name = top_y + 0.11
     y_dl = y_name + name_lines * LH_NAME + 0.02 + LH + 0.06
     y_bar = y_dl + dl_lines * LH + 0.09
     rows_top = y_bar + 0.10
 
     # Each row is as tall as its tallest cell (or its label)
-    cells = {key: [cell(key, uc, w) for uc in COLUMNS] for key, _ in ROWS}
+    cells = {key: [cell(key, uc, w, board) for uc in columns] for key, _ in rows}
     heights = {key: pad_top + max(max(h for h, _ in cells[key]), n_lines(label, F, label_w, bold=True) * LH)
-               + pad_bottom for key, label in ROWS}
+               + pad_bottom for key, label in rows}
     spare = (bottom_y - 0.06) - (rows_top + sum(heights.values()))
     if spare < 0:
         print(f"WARNING: content is {-spare:.2f} in taller than the slide", file=sys.stderr)
     for key in heights:  # share leftover space evenly
-        heights[key] += max(spare, 0) / len(ROWS)
+        heights[key] += max(spare, 0) / len(rows)
 
-    for c, uc in enumerate(COLUMNS):
+    for c, uc in enumerate(columns):
         cx = col_x0 + c * (cw + gap)
         x = cx + pad
         n = uc["name"]
-        m = uc
         s.shape(f"Col {n} Card", cx, top_y, cw, bottom_y - top_y, "roundRect", 4000, "FFFFFF")
         s.text(f"Col {n} Name", x, y_name, w, name_lines * LH_NAME + 0.02, [[r(n, F_NAME, True, INK_STRONG)]],
                anchor="t", line_pts=1300)
         y_abbr = y_name + n_lines(n, F_NAME, w * SEGOE_FACTOR, bold=True) * LH_NAME + 0.02
-        para_box(s, f"Col {n} Abbr", x, y_abbr, w, 1, [[r(m["abbr"], F, False, MUTED)]])
+        para_box(s, f"Col {n} Abbr", x, y_abbr, w, 1, [[r(uc["abbr"], F, False, MUTED)]])
         para_box(s, f"Col {n} Domain Lead", x, y_dl, w, dl_lines,
-                 [[r(m["dl"], F, False, FAINT if m["dl"] == "tbd" else INK)]])
+                 [[r(uc["dl"], F, False, FAINT if uc["dl"] == "tbd" else INK)]])
         s.shape(f"Col {n} Status Bar", x, y_bar, w, 0.04, "roundRect", 50000, STATUS[uc["status"]][1])
 
     # Left column on the dark background: labels aligned with name / Domain Lead and with each row
@@ -306,14 +330,14 @@ def build():
         para_box(s, f"Head Label {label}", label_x, y, label_w, 1, [[r(label, F, True, ACCENT_LIGHT)]])
 
     y = rows_top
-    for key, label in ROWS:
+    for key, label in rows:
         h = heights[key]
         top = y + pad_top
         s.text(f"Row Label {label}", label_x, top, label_w, h - pad_top, [[r(label, F, True, ACCENT_LIGHT)]],
                anchor="t", line_pts=1150)
-        for c, uc in enumerate(COLUMNS):
+        for c, uc in enumerate(columns):
             x = col_x0 + c * (cw + gap) + pad
-            if key != ROWS[0][0]:
+            if key != rows[0][0]:
                 s.shape(f"{uc['name']} Row Divider {label}", x, y, w, 0.007, fill=BORDER)
             cells[key][c][1](s, x, top)
         y += h
@@ -321,9 +345,7 @@ def build():
 
 
 def main():
-    write_pptx(build().shapes, OUTPUT,
-               f"Use Case Pulse Management Overview {CW} – one card per use case (read top to bottom), "
-               "sorted by overall status. Next critical milestone = most critical amber/red milestone.", bg=BG)
+    write_pptx(build(USE_CASE_BOARD).shapes, OUTPUT, USE_CASE_BOARD["notes"], bg=BG)
 
 
 if __name__ == "__main__":
