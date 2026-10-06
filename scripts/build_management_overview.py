@@ -215,7 +215,7 @@ def cell(key, uc, w, board):
     if key == "dec":
         if not uc.get("decisions"):
             return LH, lambda s, x, top: para_box(s, f"{n} Decision None", x, top, w, 1, [[r("–", F, False, FAINT)]])
-        flag, indent, gap = 0.16, 0.22, 0.08
+        flag, indent, gap = 0.16, 0.22, 0.06
         items = [(num, q, n_lines(q, F, w, indent=indent)) for num, q in uc["decisions"]]
 
         def draw(s, x, top):
@@ -234,7 +234,7 @@ def cell(key, uc, w, board):
 HEAD_LABELS = ["Name", "Domain Lead"]
 
 USE_CASE_BOARD = dict(
-    eyebrow="USE CASE PULSE · CATENA-X",
+    eyebrow="CATENA-X",
     title="Management Overview of Use Cases",
     columns=COLUMNS,
     dims=USE_CASE_DIMS,
@@ -282,46 +282,72 @@ def add_frame(s, board):
                anchor="t", wrap=False)
 
 
-def build(board=USE_CASE_BOARD):
+GRID = dict(top_y=1.07, bottom_y=7.30, label_x=0.30, label_w=0.95, col_x0=1.30, col_x1=13.03, gap=0.045,
+            pad=0.075, pad_top=0.07, pad_bottom=0.06)
+# Share of leftover height per row position: more air for rows 3-5, Decision required only moves down
+SPARE_WEIGHTS = [0.5, 1, 2, 2, 2, 1, 0]
+
+
+def card_width(board):
+    n = len(board["columns"])
+    cw = (GRID["col_x1"] - GRID["col_x0"] - GRID["gap"] * (n - 1)) / n
+    return cw, cw - 2 * GRID["pad"]
+
+
+def label_runs(label):
+    """A row label is "Title" or ("Title", "sub-line")."""
+    title, sub = (label, None) if isinstance(label, str) else label
+    paras = [[r(title, F, True, ACCENT_LIGHT)]] + ([[r(sub, F, False, ACCENT_LIGHT)]] if sub else [])
+    k = n_lines(title, F, GRID["label_w"], bold=True) + (n_lines(sub, F, GRID["label_w"]) if sub else 0)
+    return paras, k
+
+
+def compute_layout(boards):
+    """One vertical grid for all boards, so every row sits at the same height on every slide."""
+    name_lines = dl_lines = 1
+    n_rows = len(boards[0]["rows"])
+    heights = [0.0] * n_rows
+    for board in boards:
+        _, w = card_width(board)
+        cols = board["columns"]
+        name_lines = max(name_lines, *(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in cols))
+        dl_lines = max(dl_lines, *(n_lines(uc["dl"], F, w) for uc in cols))
+        for i, (key, label) in enumerate(board["rows"]):
+            content = max(max(cell(key, uc, w, board)[0] for uc in cols), label_runs(label)[1] * LH)
+            heights[i] = max(heights[i], GRID["pad_top"] + content + GRID["pad_bottom"])
+
+    y_name = GRID["top_y"] + 0.11
+    y_dl = y_name + name_lines * LH_NAME + 0.02 + LH + 0.06  # name slot, abbreviation, gap
+    y_bar = y_dl + dl_lines * LH + 0.09
+    rows_top = y_bar + 0.10
+    spare = (GRID["bottom_y"] - 0.06) - (rows_top + sum(heights))
+    if spare < 0:
+        print(f"WARNING: content is {-spare:.2f} in taller than the slide", file=sys.stderr)
+    weights = SPARE_WEIGHTS[:n_rows]
+    heights = [h + max(spare, 0) * wt / sum(weights) for h, wt in zip(heights, weights)]
+    return dict(name_lines=name_lines, dl_lines=dl_lines, y_name=y_name, y_dl=y_dl, y_bar=y_bar,
+                rows_top=rows_top, heights=heights)
+
+
+def build(board=USE_CASE_BOARD, layout=None):
+    """Build one slide; pass the layout from compute_layout() to align it with other slides."""
     columns, rows = board["columns"], board["rows"]
+    layout = layout or compute_layout([board])
+    g = GRID
+    cw, w = card_width(board)
     s = Slide()
     add_frame(s, board)
 
-    top_y, bottom_y = 1.07, 7.30
-    label_x, label_w = 0.30, 0.95
-    col_x0, col_x1, gap = 1.30, 13.03, 0.045
-    cw = (col_x1 - col_x0 - gap * (len(columns) - 1)) / len(columns)
-    pad = 0.075
-    w = cw - 2 * pad
-    pad_top, pad_bottom = 0.07, 0.06
-
-    # Header block, top-aligned: name with the abbreviation directly below it, then Domain Lead
-    # (aligned across cards and with its label) and the status bar
-    name_lines = max(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in columns)  # Segoe UI Bold ≈ Arial Bold
-    dl_lines = max(n_lines(uc["dl"], F, w) for uc in columns)
-    y_name = top_y + 0.11
-    y_dl = y_name + name_lines * LH_NAME + 0.02 + LH + 0.06
-    y_bar = y_dl + dl_lines * LH + 0.09
-    rows_top = y_bar + 0.10
-
-    # Each row is as tall as its tallest cell (or its label)
-    cells = {key: [cell(key, uc, w, board) for uc in columns] for key, _ in rows}
-    heights = {key: pad_top + max(max(h for h, _ in cells[key]), n_lines(label, F, label_w, bold=True) * LH)
-               + pad_bottom for key, label in rows}
-    spare = (bottom_y - 0.06) - (rows_top + sum(heights.values()))
-    if spare < 0:
-        print(f"WARNING: content is {-spare:.2f} in taller than the slide", file=sys.stderr)
-    for key in heights:  # share leftover space evenly
-        heights[key] += max(spare, 0) / len(rows)
-
+    name_lines, dl_lines = layout["name_lines"], layout["dl_lines"]
+    y_name, y_dl, y_bar = layout["y_name"], layout["y_dl"], layout["y_bar"]
     for c, uc in enumerate(columns):
-        cx = col_x0 + c * (cw + gap)
-        x = cx + pad
+        cx = g["col_x0"] + c * (cw + g["gap"])
+        x = cx + g["pad"]
         n = uc["name"]
-        s.shape(f"Col {n} Card", cx, top_y, cw, bottom_y - top_y, "roundRect", 4000, "FFFFFF")
+        s.shape(f"Col {n} Card", cx, g["top_y"], cw, g["bottom_y"] - g["top_y"], "roundRect", 4000, "FFFFFF")
         s.text(f"Col {n} Name", x, y_name, w, name_lines * LH_NAME + 0.02, [[r(n, F_NAME, True, INK_STRONG)]],
                anchor="t", line_pts=1300)
-        y_abbr = y_name + n_lines(n, F_NAME, w * SEGOE_FACTOR, bold=True) * LH_NAME + 0.02
+        y_abbr = y_name + n_lines(n, F_NAME, w * SEGOE_FACTOR, bold=True) * LH_NAME + 0.02  # directly below the name
         para_box(s, f"Col {n} Abbr", x, y_abbr, w, 1, [[r(uc["abbr"], F, False, MUTED)]])
         para_box(s, f"Col {n} Domain Lead", x, y_dl, w, dl_lines,
                  [[r(uc["dl"], F, False, FAINT if uc["dl"] == "tbd" else INK)]])
@@ -329,25 +355,28 @@ def build(board=USE_CASE_BOARD):
 
     # Left column on the dark background: labels aligned with name / Domain Lead and with each row
     for label, y in zip(HEAD_LABELS, (y_name + 0.03, y_dl)):
-        para_box(s, f"Head Label {label}", label_x, y, label_w, 1, [[r(label, F, True, ACCENT_LIGHT)]])
+        para_box(s, f"Head Label {label}", g["label_x"], y, g["label_w"], 1, [[r(label, F, True, ACCENT_LIGHT)]])
 
-    y = rows_top
-    for key, label in rows:
-        h = heights[key]
-        top = y + pad_top
-        s.text(f"Row Label {label}", label_x, top, label_w, h - pad_top, [[r(label, F, True, ACCENT_LIGHT)]],
+    y = layout["rows_top"]
+    for (key, label), h in zip(rows, layout["heights"]):
+        top = y + g["pad_top"]
+        paras, _ = label_runs(label)
+        title = label if isinstance(label, str) else label[0]
+        s.text(f"Row Label {title}", g["label_x"], top, g["label_w"], h - g["pad_top"], paras,
                anchor="t", line_pts=1150)
         for c, uc in enumerate(columns):
-            x = col_x0 + c * (cw + gap) + pad
+            x = g["col_x0"] + c * (cw + g["gap"]) + g["pad"]
             if key != rows[0][0]:
-                s.shape(f"{uc['name']} Row Divider {label}", x, y, w, 0.007, fill=BORDER)
-            cells[key][c][1](s, x, top)
+                s.shape(f"{uc['name']} Row Divider {title}", x, y, w, 0.007, fill=BORDER)
+            cell(key, uc, w, board)[1](s, x, top)
         y += h
     return s
 
 
 def main():
-    write_pptx(build(USE_CASE_BOARD).shapes, OUTPUT, USE_CASE_BOARD["notes"], bg=BG)
+    from build_enabling_overview import ENABLING_BOARD  # same grid as the enabling slide
+    layout = compute_layout([USE_CASE_BOARD, ENABLING_BOARD])
+    write_pptx(build(USE_CASE_BOARD, layout).shapes, OUTPUT, USE_CASE_BOARD["notes"], bg=BG)
 
 
 if __name__ == "__main__":

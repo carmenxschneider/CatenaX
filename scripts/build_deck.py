@@ -36,11 +36,12 @@ def main():
     tail_start = slide.rindex("</p:spTree>")
 
     # Slide 1 keeps the template's hidden think-cell frame; slide 2 gets no OLE parts of its own
+    boards = [mgmt.USE_CASE_BOARD, build_enabling_overview.ENABLING_BOARD]
+    layout = mgmt.compute_layout(boards)  # one grid: rows line up when switching slides
     slide1 = build_overview.set_bg(
-        slide[:head_end] + "".join(mgmt.build(mgmt.USE_CASE_BOARD).shapes) + slide[tail_start:], mgmt.BG)
+        slide[:head_end] + "".join(mgmt.build(boards[0], layout).shapes) + slide[tail_start:], mgmt.BG)
     slide2 = build_overview.set_bg(
-        slide[:graphic_start] + "".join(mgmt.build(build_enabling_overview.ENABLING_BOARD).shapes)
-        + slide[tail_start:], mgmt.BG)
+        slide[:graphic_start] + "".join(mgmt.build(boards[1], layout).shapes) + slide[tail_start:], mgmt.BG)
 
     layout = re.search(r'Target="(\.\./slideLayouts/[^"]+)"', read("ppt/slides/_rels/slide1.xml.rels")).group(1)
     slide2_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'

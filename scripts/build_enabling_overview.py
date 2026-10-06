@@ -10,7 +10,7 @@ Supplier Activation).
 
 import sys
 
-from build_management_overview import BG, CW, TEMPLATE, build, write_pptx
+from build_management_overview import BG, CW, TEMPLATE, USE_CASE_BOARD, build, compute_layout, write_pptx
 
 TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else TEMPLATE
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/Enabling_Pulse_Management_Overview_CW41_26.pptx"
@@ -28,11 +28,11 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
          sup=(240, 400), sup_pct=55, sup_note="228 company groups",
          ms=("esc", "280 suppliers contracted", "30 Sep 2026"),
          dims=["esc", "ps", "ns", "ns"],
-         decisions=[(1, "Red: Cofinity-X processes and portal unclear for suppliers; "
-                        "DSA confirmation costs per use case open")]),
+         decisions=[(1, "How do we make Cofinity-X onboarding clear for suppliers, "
+                        "and who covers DSA confirmation costs per use case?")]),
     dict(name="Portfolio, AI+, C-X NEXT, DigiTrace", abbr="port-cx", dl="Bollmann, Poetsch (K-DDX/5)", status="esc",
          goal="Budget and funding secured in every planning round",
-         kpi=("PR74 & PR75 secured", None, "2 by 31 Dec 2026"),
+         kpi=("Budgets secured", "0", "2 (PR74, PR75)"),
          sup=None, sup_text="–",
          ms=("esc", "Secure PR74", "Nov 2026"),
          dims=["ok", "ps", "ps", "ok"],
@@ -51,8 +51,8 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
          ms=("ps", "Framework agreements signed", "31 Dec 2026"),
          dims=["ok", "ps", "ns", "ns"]),
     dict(name="Legal & Contracts", abbr="gis-cx", dl="Pietschmann", status="ps",  # Domain Lead to be confirmed
-         goal="Framework contracts with brands and data consumers in place",
-         kpi=("Automated contract cycle live", None, "01 Jan 2028"),
+         goal="Framework contracts with all brands and data consumers",
+         kpi=("Automated contract cycle", "not live", "live by 01 Jan 2028"),
          sup=None, sup_text="–",
          ms=("ps", "Managed by Cofinity-X", "Oct 2026"),
          dims=["ok", "ps", "ok", "ps"]),
@@ -64,7 +64,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
 ]
 
 ENABLING_BOARD = dict(
-    eyebrow="ENABLING PULSE · CATENA-X",
+    eyebrow="CATENA-X",
     title="Management Overview of Enabling Streams",
     columns=COLUMNS,
     dims=ENABLING_DIMS,
@@ -72,7 +72,7 @@ ENABLING_BOARD = dict(
     rows=[
         ("status", "Overall status"),
         ("goal", "Goal"),
-        ("kpi", "Key KPI actual / target"),
+        ("kpi", ("Key KPI", "actual / target")),
         ("sup", "Suppliers enabled 2026"),
         ("ms", "Next critical milestone"),
         ("dims", "Dimensions"),
@@ -84,7 +84,8 @@ ENABLING_BOARD = dict(
 
 
 def main():
-    write_pptx(build(ENABLING_BOARD).shapes, OUTPUT, ENABLING_BOARD["notes"], bg=BG)
+    layout = compute_layout([USE_CASE_BOARD, ENABLING_BOARD])  # same grid as the use case slide
+    write_pptx(build(ENABLING_BOARD, layout).shapes, OUTPUT, ENABLING_BOARD["notes"], bg=BG)
 
 
 if __name__ == "__main__":
