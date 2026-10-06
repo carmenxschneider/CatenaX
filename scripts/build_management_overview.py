@@ -17,40 +17,56 @@ import sys
 from PIL import ImageFont
 
 from build_overview import (
-    BORDER, COMPLETED, DECISIONS, DIM_NAMES, DOT, ESCALATION, FAINT, INK, INK_STRONG, MUTED, NOT_STARTED,
-    ON_TRACK, PROBLEM, STATUS, TEMPLATE, USE_CASES, Slide, r, write_pptx,
+    BORDER, COMPLETED, DIM_NAMES, DOT, ESCALATION, FAINT, INK, INK_STRONG, MUTED, NOT_STARTED, ON_TRACK, PROBLEM,
+    STATUS, TEMPLATE, Slide, r, write_pptx,
 )
 
 TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else TEMPLATE
-OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW40_26.pptx"
+OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW41_26.pptx"
 
 # ---------------------------------------------------------------- data
-# Per use case: lower-case abbreviation, Domain Lead (surname + department), E2E go-live target date.
-# Domain Leads from the Catena-X use case overview (PURIS = "Capacity & Bottleneck Mgmt.",
-# Product Passes = "Product Passports"; Battery Passport not listed yet).
-# TODO: next critical milestones of the first seven use cases still to be taken from their PULSE decks;
-#       until then the previous next milestone is shown.
-MANAGEMENT = {
-    "Quality": dict(abbr="quality-cx", dl="Kutritz (K-GQY)", go_live=("MVP Jan '27", "Scaling until 2030")),
-    "Battery Passport": dict(abbr="battpass-cx", dl="tbd", go_live=("Feb 2027", None)),
-    "Product Passes": dict(abbr="pass-cx", dl="Drobir (K-GEP)", go_live=None, go_live_note="not defined yet"),
-    "PURIS": dict(abbr="puris-cx", dl="Timpe (KL-GP), Behrens (BZ-PX)", go_live=None, go_live_note="not specified"),
-    "Business Partner Data Mgmt": dict(abbr="bpdm-cx", dl="Fehlner (I/BZ-P)", go_live=("Feb 2027", None)),
-    "Certificate Management": dict(abbr="cert-mgmt", dl="Poetsch (K-DDX/5)", go_live=("May 2028", None)),
-    "Product Carbon Footprint": dict(abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", go_live=("01 Jan 2028", None)),
-    "N-Tier": dict(abbr="ntier-cx", dl="Fink (BZI2)", go_live=None, go_live_note="not defined yet"),
-}
+# CW 41 / 2026 PULSE slides (Quality: CW 40 deck, content confirmed as current; N-Tier: CW 41 screenshot).
+# Content in short business English. Abbreviations lower case.
+# ms = next critical milestone: the most critical amber/red milestone (red before amber, then earliest);
+#      None = the timeline has no amber/red milestone.
+# dims = External · CX Association, Business, Data Provisioning, Technical; sa = Supplier Activation.
+CW = "CW 41 / 2026"
 
-# N-Tier, from Template_UseCase_PULSE_Meeting_Update_1.pptx, slide CW 40 / 2026
-N_TIER = dict(
-    name="N-Tier", status="ok", phase="Definition & Clarification",
-    ms=None,                                   # no amber/red milestone (completed, on track, not started)
-    dims=["ok", "ns", "ns", "ns"], sa="ns",    # External on track, the other four not started
-    sup=None,                                  # supplier enablement N/A
-)
+COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
+    dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="esc", phase="Piloting",
+         go_live=("MVP Jan '27", "Scaling until 2030"),
+         sup=(0, 2), sup_note="rescoped from 15",
+         ms=("esc", "SQA CX MVP scale-up", "31 Jan 2027"),
+         dims=["ok", "ps", "ps", "ps"], sa="ps",
+         decision=(1, "Approve rescoping from 15 to 2 suppliers until the Early Warning Production MVP is live?")),
+    dict(name="Battery Passport", abbr="batt-cx", dl="Alp (ZG-R)", status="ps", phase="Piloting",
+         go_live=("Feb 2027", None), sup=(0, 1), ms=None,
+         dims=["ps", "ps", "ok", "ok"], sa="ok"),
+    dict(name="Product Passes", abbr="pass-cx", dl="Drobir (K-GEP-2)", status="ps", phase="Definition & Clarification",
+         go_live=None, sup=(0, 1),
+         ms=("ps", "Product passes prioritized", "31 Oct 2026"),
+         dims=["ps", "ps", "ok", "ok"], sa="ok"),
+    dict(name="PURIS", abbr="puris-cx", dl="Timpe (KL-GP), Behrens (BZ-PX)", status="ps", phase="Piloting",
+         go_live=None, sup=(1, 6),
+         ms=("ps", "Plan for existing challenges ready", "9 Oct 2026"),
+         dims=["ok", "ps", "ps", "ps"], sa="ps",
+         decision=(2, "Who decides how and when on the WINGS connectivity rollout roadmap?")),
+    dict(name="Business Partner Data Mgmt", abbr="bpdm-cx", dl="Fehlner (I/BZ)", status="ps", phase="Implementation",
+         go_live=("Feb 2027", None), sup=(0, 1), ms=None,
+         dims=["ps", "ps", "ok", "ps"], sa="ns"),
+    dict(name="Certificate Management", abbr="cert-cx", dl="Poetsch (K-DDX/5)", status="ps", phase="Scaling",
+         go_live=("May 2028", None), sup=(82, 100),
+         ms=("ps", "Official CX CCM release", "Sep 2026"),
+         dims=["ps", "ok", "ok", "ok"], sa="ok"),
+    dict(name="Product Carbon Footprint", abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", status="ok",
+         phase="Piloting", go_live=("01 Jan 2028", None), sup=(0, 1), ms=None,
+         dims=["ok", "ok", "ok", "ok"], sa="ok"),
+    dict(name="N-Tier", abbr="ntier-cx", dl="Fink (BZI2)", status="ok", phase="Definition & Clarification",
+         go_live=None, sup=None, ms=None,
+         dims=["ok", "ns", "ns", "ns"], sa="ns"),
+]
+GO_LIVE_MISSING = "not defined yet"
 
-# Same sort as before: Escalation needed -> Problem solving -> On track
-COLUMNS = USE_CASES + [N_TIER]
 
 # ---------------------------------------------------------------- typography
 F = 9           # one size for every card value, secondary line and row label
@@ -113,7 +129,6 @@ def para_box(s, name, x, top, w, k, paras):
 def cell(key, uc, w):
     """Return (content height, draw) for one cell; draw(s, x, top) adds the shapes."""
     n = uc["name"]
-    m = MANAGEMENT[n]
 
     if key == "status":
         lbl, fill, fg = STATUS[uc["status"]]
@@ -130,13 +145,13 @@ def cell(key, uc, w):
         return k * LH, lambda s, x, top: para_box(s, f"{n} Phase", x, top, w, k, [[r(uc["phase"], F, False, INK)]])
 
     if key == "golive":
-        if m["go_live"]:
-            main, second = m["go_live"]
+        if uc["go_live"]:
+            main, second = uc["go_live"]
             paras = [[r(main, F, False, INK)]] + ([[r(second, F, False, MUTED)]] if second else [])
             k = sum(n_lines(t, F, w) for t in (main, second) if t)
         else:
-            paras = [[r("–  ", F, False, FAINT), r(m["go_live_note"], F, False, FAINT, None, True)]]
-            k = n_lines("–  " + m["go_live_note"], F, w)
+            paras = [[r("–  ", F, False, FAINT), r(GO_LIVE_MISSING, F, False, FAINT, None, True)]]
+            k = n_lines("–  " + GO_LIVE_MISSING, F, w)
         return k * LH, lambda s, x, top: para_box(s, f"{n} Go-live", x, top, w, k, paras)
 
     if key == "sup":
@@ -147,9 +162,9 @@ def cell(key, uc, w):
             pct = round(100 * done / total)
             paras = [[r(f"{done} / {total}", F, True, COMPLETED), r(f"  {pct}%", F, False, MUTED)]]
             k = 1
-            if uc.get("note"):
-                paras.append([r("rescoped from 15", F, False, MUTED)])
-                k += n_lines("rescoped from 15", F, w)
+            if uc.get("sup_note"):
+                paras.append([r(uc["sup_note"], F, False, MUTED)])
+                k += n_lines(uc["sup_note"], F, w)
         return k * LH, lambda s, x, top: para_box(s, f"{n} Suppliers", x, top, w, k, paras)
 
     if key == "ms":
@@ -185,8 +200,7 @@ def cell(key, uc, w):
     if key == "dec":
         if not uc.get("decision"):
             return LH, lambda s, x, top: para_box(s, f"{n} Decision None", x, top, w, 1, [[r("–", F, False, FAINT)]])
-        num = uc["decision"]
-        question = DECISIONS[num - 1][1]
+        num, question = uc["decision"]
         flag, indent = 0.16, 0.22
         k = n_lines(question, F, w, indent=indent)
 
@@ -223,7 +237,7 @@ def add_frame(s):
     px, py, pw, ph = 8.45, 0.24, 4.58, 0.66
     s.shape("Info Panel", px, py, pw, ph, "roundRect", 14000, PANEL, TEAL, 9525)
     s.text("Panel Label", px + 0.18, py + 0.11, 1.25, 0.16, [[r("Status as of", F, False, ACCENT_LIGHT)]], anchor="t")
-    s.text("Panel CW", px + 0.18, py + 0.30, 1.25, 0.24, [[r("CW 40 / 2026", 12, True, ON_DARK)]], anchor="t")
+    s.text("Panel CW", px + 0.18, py + 0.30, 1.25, 0.24, [[r(CW, 12, True, ON_DARK)]], anchor="t")
     s.shape("Panel Divider", px + 1.42, py + 0.14, 0.008, ph - 0.28, fill=TEAL)
 
     legend = [("On Track", ON_TRACK), ("Problem Solving", PROBLEM),        # column 1
@@ -251,7 +265,7 @@ def build():
     # Header block, top-aligned: name with the abbreviation directly below it, then Domain Lead
     # (aligned across cards and with its label) and the status bar
     name_lines = max(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in COLUMNS)  # Segoe UI Bold ≈ Arial Bold
-    dl_lines = max(n_lines(MANAGEMENT[uc["name"]]["dl"], F, w) for uc in COLUMNS)
+    dl_lines = max(n_lines(uc["dl"], F, w) for uc in COLUMNS)
     y_name = top_y + 0.11
     y_dl = y_name + name_lines * LH_NAME + 0.02 + LH + 0.06
     y_bar = y_dl + dl_lines * LH + 0.09
@@ -271,7 +285,7 @@ def build():
         cx = col_x0 + c * (cw + gap)
         x = cx + pad
         n = uc["name"]
-        m = MANAGEMENT[n]
+        m = uc
         s.shape(f"Col {n} Card", cx, top_y, cw, bottom_y - top_y, "roundRect", 4000, "FFFFFF")
         s.text(f"Col {n} Name", x, y_name, w, name_lines * LH_NAME + 0.02, [[r(n, F_NAME, True, INK_STRONG)]],
                anchor="t", line_pts=1300)
@@ -302,7 +316,7 @@ def build():
 
 def main():
     write_pptx(build().shapes, OUTPUT,
-               "Use Case Pulse Management Overview CW 40 / 2026 – one card per use case (read top to bottom), "
+               f"Use Case Pulse Management Overview {CW} – one card per use case (read top to bottom), "
                "sorted by overall status. Next critical milestone = most critical amber/red milestone.", bg=BG)
 
 
