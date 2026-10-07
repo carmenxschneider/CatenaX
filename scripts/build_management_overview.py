@@ -25,7 +25,7 @@ TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else TEMPLATE
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW41_26.pptx"
 
 # ---------------------------------------------------------------- data
-# CW 41 / 2026 PULSE slides (Quality: CW 40 deck, content confirmed as current; N-Tier: CW 41 screenshot).
+# CW 41 / 2026 PULSE slides (Quality: updated CW 41 deck; N-Tier, BPDM, Certificate Management: CW 41 screenshots).
 # Content in short business English. Abbreviations lower case.
 # ms = next critical milestone: the most critical amber/red milestone (red before amber, then earliest);
 #      None = the timeline has no amber/red milestone.
@@ -33,13 +33,12 @@ OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_
 CW = "CW 41 / 2026"
 USE_CASE_DIMS = DIM_NAMES + ["Supplier Activation"]
 
-COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
-    dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="esc", phase="Piloting",
+COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no escalation in CW 41)
+    dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="ps", phase="Piloting",  # CW 41 deck
          go_live=("MVP Jan '27", "Scaling until 2030"),
          sup=(0, 2), sup_note="rescoped from 15",
-         ms=("esc", "SQA CX MVP scale-up", "31 Jan 2027"),
-         dims=["ok", "ps", "ps", "ps", "ps"],
-         decisions=[(1, "Approve rescoping from 15 to 2 suppliers until the Early Warning Production MVP is live?")]),
+         ms=("ps", "Domain expertise & ownership aligned", "30 Sep 2026"),
+         dims=["ok", "ps", "ps", "ps", "ps"]),  # rescope 15 -> 2 decided in CW 41
     dict(name="Battery Passport", abbr="batt-cx", dl="Alp (ZG-R)", status="ps", phase="Piloting",
          go_live=("Feb 2027", None), sup=(0, 1), ms=None,
          dims=["ps", "ps", "ok", "ok", "ok"]),
@@ -51,7 +50,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
          go_live=None, sup=(1, 6),
          ms=("ps", "Plan for existing challenges ready", "9 Oct 2026"),
          dims=["ok", "ps", "ps", "ps", "ps"],
-         decisions=[(2, "Who decides how and when on the WINGS connectivity rollout roadmap?")]),
+         decisions=[(1, "Who decides how and when on the WINGS connectivity rollout roadmap?")]),
     dict(name="Business Partner Data Mgmt", abbr="bpdm-cx", dl="Fehlner (I/BZ)", status="ps", phase="Implementation",
          go_live=("Feb 2027", None), sup=(0, 1), ms=None,
          dims=["ps", "ps", "ok", "ps", "ns"]),
