@@ -27,6 +27,7 @@ OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_
 # ---------------------------------------------------------------- data
 # CW 42 / 2026 PULSE slides (screenshots). PCF colours confirmed by the reporting team (lime green = amber).
 # Content in short business English. Abbreviations lower case.
+# Date formats: go-live "Mon YYYY"; milestones "DD Mon YYYY" (or "Mon YYYY" if the source has no day).
 # ms = next critical milestone: the most critical amber/red milestone (red before amber, then earliest);
 #      None = the timeline has no amber/red milestone.
 # dims = status per dimension, in the order of USE_CASE_DIMS.
@@ -35,7 +36,7 @@ USE_CASE_DIMS = DIM_NAMES + ["Supplier Activation"]
 
 COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no escalation in CW 42)
     dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="ps", phase="Piloting",
-         go_live=("MVP Jan '27", "Scaling until 2030"),
+         go_live=("MVP Jan 2027", "Scaling until 2030"),
          sup=(0, 2), sup_note="rescoped from 15",
          ms=("ps", "Domain expertise & ownership aligned", "30 Sep 2026"),
          dims=["ok", "ps", "ps", "ps", "ps"]),  # rescope 15 -> 2 decided in CW 41
@@ -48,7 +49,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no esca
          dims=["ps", "ps", "ok", "ok", "ok"]),
     dict(name="PURIS", abbr="puris-cx", dl="Timpe (KL-GP), Behrens (BZ-PX)", status="ps", phase="Piloting",
          go_live=None, sup=(1, 6),
-         ms=("ps", "Plan for existing challenges ready", "9 Oct 2026"),
+         ms=("ps", "Plan for existing challenges ready", "09 Oct 2026"),
          dims=["ok", "ps", "ps", "ps", "ps"],
          decisions=[(1, "Who decides how and when on the WINGS connectivity rollout roadmap?")]),
     dict(name="Business Partner Data Mgmt", abbr="bpdm-cx", dl="Fehlner (I/BZ)", status="ps", phase="Implementation",
@@ -59,7 +60,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no esca
          ms=("ps", "Official CX CCM release", "Sep 2026"),
          dims=["ok", "ok", "ok", "ok", "ok"]),
     dict(name="Product Carbon Footprint", abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", status="ps",
-         phase="Piloting", go_live=("01 Jan 2028", None), sup=(0, 1),
+         phase="Piloting", go_live=("Jan 2028", None), sup=(0, 1),
          ms=("ps", "Supplier activation pilot stage 1", "15 Oct 2026"),
          dims=["ok", "ok", "ps", "ok", "ps"]),
     dict(name="N-Tier", abbr="ntier-cx", dl="Fink (BZI2)", status="ok", phase="Definition & Clarification",
@@ -127,7 +128,7 @@ def para_box(s, name, x, top, w, k, paras):
     s.text(name, x, top, w, k * LH + 0.02, paras, anchor="t", line_pts=1150)
 
 
-def cell(key, uc, w, board):
+def cell(key, uc, w, board, row_h=None):
     """Return (content height, draw) for one cell; draw(s, x, top) adds the shapes."""
     n = uc["name"]
 
@@ -203,6 +204,10 @@ def cell(key, uc, w, board):
         items = [(dim, DIM_LINES.get(dim, [dim]), st) for dim, st in zip(board["dims"], uc["dims"])]
         items = [(dim, lines, st, sum(n_lines(t, F, w - DOT_W) for t in lines)) for dim, lines, st in items]
         gap = board.get("dim_gap", 0.05)
+        if row_h:  # spread the dimensions over the row height they were given (up to a comfortable maximum)
+            text_h = sum(k for *_, k in items) * LH
+            free = row_h - GRID["pad_top"] - GRID["pad_bottom"] - text_h
+            gap = min(0.16, max(gap, free / (len(items) - 1)))
 
         def draw(s, x, top):
             y = top
@@ -285,7 +290,7 @@ def add_frame(s, board):
 GRID = dict(top_y=1.07, bottom_y=7.30, label_x=0.30, label_w=0.95, col_x0=1.30, col_x1=13.03, gap=0.045,
             pad=0.075, pad_top=0.07, pad_bottom=0.06)
 # Leftover height: top row / middle band / dimensions / decisions. Decision required only moves down.
-SPARE_SHARE = dict(top=0.5, middle=7, dims=1, dec=0)
+SPARE_SHARE = dict(top=0.5, middle=5, dims=3, dec=0)
 
 
 def card_width(board):
@@ -385,7 +390,7 @@ def build(board=USE_CASE_BOARD, layout=None):
             x = g["col_x0"] + c * (cw + g["gap"]) + g["pad"]
             if key != rows[0][0]:
                 s.shape(f"{uc['name']} Row Divider {title}", x, y, w, 0.007, fill=BORDER)
-            cell(key, uc, w, board)[1](s, x, top)
+            cell(key, uc, w, board, row_h=h if key == "dims" else None)[1](s, x, top)
         y += h
     return s
 
