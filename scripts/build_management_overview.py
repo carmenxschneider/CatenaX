@@ -121,7 +121,30 @@ def hanging(shape_xml, first_line_indent):
 
 # ---------------------------------------------------------------- cells
 DOT_W = 0.15  # dot + gap before a dotted label
-DIM_LINES = {"External · CX Association": ["External ·", "CX Association"]}  # break after the dot
+
+# Dimensions block: "Dimensions" header line, then one thin swimlane per dimension (dot only in the cards)
+DIM_HEAD = LH + 0.04   # header line inside the dimensions row
+DIM_SUB_MIN = 0.18     # minimum height of one swimlane
+DIM_DOT = 0.11         # dot diameter in the swimlanes
+DIM_LABEL_PT = 8.5     # dimension names in the label column
+LANE = "EDF0F3"        # swimlane divider
+RING = "AEB9C1"        # outline of the "not started" ring on white cards
+DIM_SHORT = {"External · CX Association": "CX Association"}  # label column is narrow
+
+
+def dim_rows(top, row_h, n):
+    """Top y of each swimlane and the swimlane height, for a dimensions row starting at `top` (after pad_top)."""
+    start = top + DIM_HEAD
+    sub = (row_h - GRID["pad_top"] - GRID["pad_bottom"] - DIM_HEAD) / n
+    return [start + i * sub for i in range(n)], sub
+
+
+def status_dot(s, name, x, cy, d, st, ring=RING, ring_fill="FFFFFF"):
+    """Filled status dot; "not started" is drawn as a hollow ring."""
+    if st == "ns":
+        s.shape(f"{name} Ring", x, cy - d / 2, d, d, "ellipse", fill=ring_fill, line=ring, line_w=15875)
+    else:
+        s.shape(f"{name} Dot", x, cy - d / 2, d, d, "ellipse", fill=DOT[st])
 
 
 def para_box(s, name, x, top, w, k, paras):
@@ -201,21 +224,16 @@ def cell(key, uc, w, board, row_h=None):
         return k * LH, draw
 
     if key == "dims":
-        items = [(dim, DIM_LINES.get(dim, [dim]), st) for dim, st in zip(board["dims"], uc["dims"])]
-        items = [(dim, lines, st, sum(n_lines(t, F, w - DOT_W) for t in lines)) for dim, lines, st in items]
-        gap = board.get("dim_gap", 0.05)
-        if row_h:  # spread the dimensions over the row height they were given (up to a comfortable maximum)
-            text_h = sum(k for *_, k in items) * LH
-            free = row_h - GRID["pad_top"] - GRID["pad_bottom"] - text_h
-            gap = min(0.16, max(gap, free / (len(items) - 1)))
+        n_sub = len(board["dims"])
+        min_h = DIM_HEAD + n_sub * DIM_SUB_MIN
 
         def draw(s, x, top):
-            y = top
-            for dim, lines, st, k in items:
-                s.shape(f"{n} Dim Dot {dim}", x, y + 0.04, 0.08, 0.08, "ellipse", fill=DOT[st])
-                para_box(s, f"{n} Dim {dim}", x + DOT_W, y, w - DOT_W, k, [[r(t, F, False, INK)] for t in lines])
-                y += k * LH + gap
-        return sum(k for *_, k in items) * LH + gap * (len(items) - 1), draw
+            ys, sub = dim_rows(top, row_h or (GRID["pad_top"] + min_h + GRID["pad_bottom"]), n_sub)
+            for i, (dim, st, y) in enumerate(zip(board["dims"], uc["dims"], ys)):
+                if i:  # fine swimlane line between the sub-rows
+                    s.shape(f"{n} Dim Lane {dim}", x, y, w, 0.005, fill=LANE)
+                status_dot(s, f"{n} Dim {dim}", x, y + sub / 2, DIM_DOT, st)
+        return min_h, draw
 
     if key == "dec":
         if not uc.get("decisions"):
@@ -282,15 +300,17 @@ def add_frame(s, board):
     for i, (lbl, col) in enumerate(legend):
         lx = dx + 0.008 + gap + (0 if i < 2 else col_w[0] + 0.12)
         ly = py + 0.08 + (i % 2) * 0.18
-        s.shape(f"Legend Dot {lbl}", lx, ly + 0.035, 0.075, 0.075, "ellipse", fill=col)
+        status_dot(s, f"Legend {lbl}", lx, ly + 0.0725, 0.075, "ns" if col == NOT_STARTED else "ok",
+                   ring=NOT_STARTED, ring_fill=PANEL) if col == NOT_STARTED else \
+            s.shape(f"Legend Dot {lbl}", lx, ly + 0.035, 0.075, 0.075, "ellipse", fill=col)
         s.text(f"Legend {lbl}", lx + 0.14, ly, col_w[i // 2] - 0.14, 0.15, [[r(lbl, f_leg, False, ON_DARK_MUTED)]],
                anchor="t", wrap=False)
 
 
-GRID = dict(top_y=1.07, bottom_y=7.30, label_x=0.30, label_w=0.95, col_x0=1.30, col_x1=13.03, gap=0.045,
+GRID = dict(top_y=1.07, bottom_y=7.30, label_x=0.30, label_w=1.08, col_x0=1.42, col_x1=13.03, gap=0.045,
             pad=0.075, pad_top=0.07, pad_bottom=0.06)
 # Leftover height: top row / middle band / dimensions / decisions. Decision required only moves down.
-SPARE_SHARE = dict(top=0.5, middle=5, dims=3, dec=0)
+SPARE_SHARE = dict(top=0.5, middle=3, dims=5, dec=0)
 
 
 def card_width(board):
@@ -386,6 +406,11 @@ def build(board=USE_CASE_BOARD, layout=None):
         title = label if isinstance(label, str) else label[0]
         s.text(f"Row Label {title}", g["label_x"], top, g["label_w"], h - g["pad_top"], paras,
                anchor="t", line_pts=1150)
+        if key == "dims":  # dimension names once, in the label column, centred on their swimlane
+            ys, sub = dim_rows(top, h, len(board["dims"]))
+            for dim, yy in zip(board["dims"], ys):
+                s.text(f"Dim Label {dim}", g["label_x"] + 0.08, yy, g["label_w"] - 0.08, sub,
+                       [[r(DIM_SHORT.get(dim, dim), DIM_LABEL_PT, False, ACCENT_LIGHT)]], anchor="ctr", wrap=False)
         for c, uc in enumerate(columns):
             x = g["col_x0"] + c * (cw + g["gap"]) + g["pad"]
             if key != rows[0][0]:
