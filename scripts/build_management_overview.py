@@ -22,19 +22,19 @@ from build_overview import (
 )
 
 TEMPLATE = sys.argv[1] if len(sys.argv) > 1 else TEMPLATE
-OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW41_26.pptx"
+OUTPUT = sys.argv[2] if len(sys.argv) > 2 else "output/UseCase_Pulse_Management_Overview_CW42_26.pptx"
 
 # ---------------------------------------------------------------- data
-# CW 41 / 2026 PULSE slides (Quality: updated CW 41 deck; N-Tier, BPDM, Certificate Management: CW 41 screenshots).
+# CW 42 / 2026 PULSE slides (screenshots). PCF colours confirmed by the reporting team (lime green = amber).
 # Content in short business English. Abbreviations lower case.
 # ms = next critical milestone: the most critical amber/red milestone (red before amber, then earliest);
 #      None = the timeline has no amber/red milestone.
 # dims = status per dimension, in the order of USE_CASE_DIMS.
-CW = "CW 41 / 2026"
+CW = "CW 42 / 2026"
 USE_CASE_DIMS = DIM_NAMES + ["Supplier Activation"]
 
-COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no escalation in CW 41)
-    dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="ps", phase="Piloting",  # CW 41 deck
+COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no escalation in CW 42)
+    dict(name="Quality", abbr="quality-cx", dl="Kutritz (K-GQY)", status="ps", phase="Piloting",
          go_live=("MVP Jan '27", "Scaling until 2030"),
          sup=(0, 2), sup_note="rescoped from 15",
          ms=("ps", "Domain expertise & ownership aligned", "30 Sep 2026"),
@@ -53,14 +53,15 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no esca
          decisions=[(1, "Who decides how and when on the WINGS connectivity rollout roadmap?")]),
     dict(name="Business Partner Data Mgmt", abbr="bpdm-cx", dl="Fehlner (I/BZ)", status="ps", phase="Implementation",
          go_live=("Feb 2027", None), sup=(0, 1), ms=None,
-         dims=["ps", "ps", "ok", "ps", "ns"]),
+         dims=["ok", "ps", "ok", "ps", "ns"]),
     dict(name="Certificate Management", abbr="cert-cx", dl="Poetsch (K-DDX/5)", status="ps", phase="Scaling",
-         go_live=("May 2028", None), sup=(82, 100),
+         go_live=("May 2028", None), sup=(89, 100),
          ms=("ps", "Official CX CCM release", "Sep 2026"),
-         dims=["ps", "ok", "ok", "ok", "ok"]),
-    dict(name="Product Carbon Footprint", abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", status="ok",
-         phase="Piloting", go_live=("01 Jan 2028", None), sup=(0, 1), ms=None,
          dims=["ok", "ok", "ok", "ok", "ok"]),
+    dict(name="Product Carbon Footprint", abbr="pcf-cx", dl="Dettmer (K-GEN), Voeste (K-GSS)", status="ps",
+         phase="Piloting", go_live=("01 Jan 2028", None), sup=(0, 1),
+         ms=("ps", "Supplier activation pilot stage 1", "15 Oct 2026"),
+         dims=["ok", "ok", "ps", "ok", "ps"]),
     dict(name="N-Tier", abbr="ntier-cx", dl="Fink (BZI2)", status="ok", phase="Definition & Clarification",
          go_live=None, sup=None, ms=None,
          dims=["ok", "ns", "ns", "ns", "ns"]),
