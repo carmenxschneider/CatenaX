@@ -33,7 +33,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track
     dict(name="Supplier Activation", abbr="sac-cx", dl="Stuhrmann (BZ-PX)", status="ps",
          goal="All P-Mat suppliers operationally connected",
          kpi=("Suppliers contracted by Q3", "240", "280"),
-         ms=("ps", "280 suppliers contracted", "30 Sep 2026"),
+         ms=("ps", "EoY goal: 400 suppliers contracted", "31 Dec 2026"),  # 30 Sep milestone past due
          dims=["ps", "ps", "ns", "ns"]),
     dict(name="Data Provisioning", abbr="dpr-cx", dl="Kraus (K-DDX/5)", status="ps",
          goal="Catena-X data provided as shoppable data products",
