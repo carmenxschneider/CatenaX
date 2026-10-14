@@ -41,7 +41,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no esca
          ms=("ps", "Domain expertise & ownership aligned", "30 Sep 2026"),
          dims=["ok", "ps", "ps", "ps", "ps"]),  # rescope 15 -> 2 decided in CW 41
     dict(name="Battery Passport", abbr="batt-cx", dl="Alp (ZG-R)", status="ps", phase="Piloting",
-         go_live=("Feb 2027", None), sup=(0, 1), ms=None,
+         go_live=("Feb 2027", None), sup=(0, 1), ms=("ok", "Tech requirements done", "31 Oct 2026"),
          dims=["ps", "ps", "ok", "ok", "ok"]),
     dict(name="Product Passes", abbr="pass-cx", dl="Drobir (K-GEP-2)", status="ps", phase="Definition & Clarification",
          go_live=None, sup=(0, 1),
@@ -50,10 +50,9 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no esca
     dict(name="PURIS", abbr="puris-cx", dl="Timpe (KL-GP), Behrens (BZ-PX)", status="ps", phase="Piloting",
          go_live=None, sup=(1, 6),
          ms=("ps", "Plan for existing challenges ready", "09 Oct 2026"),
-         dims=["ok", "ps", "ps", "ps", "ps"],
-         decisions=[(1, "Who decides how and when on the WINGS connectivity rollout roadmap?")]),
+         dims=["ok", "ps", "ps", "ps", "ps"]),
     dict(name="Business Partner Data Mgmt", abbr="bpdm-cx", dl="Fehlner (I/BZ)", status="ps", phase="Implementation",
-         go_live=("Feb 2027", None), sup=(0, 1), ms=None,
+         go_live=("Feb 2027", None), sup=(0, 1), ms=("ok", "BPDM target picture defined", "31 Oct 2026"),
          dims=["ok", "ps", "ok", "ps", "ns"]),
     dict(name="Certificate Management", abbr="cert-cx", dl="Poetsch (K-DDX/5)", status="ps", phase="Scaling",
          go_live=("May 2028", None), sup=(89, 100),
@@ -64,7 +63,7 @@ COLUMNS = [  # sorted: Escalation needed -> Problem solving -> On track (no esca
          ms=("ps", "Supplier activation pilot stage 1", "15 Oct 2026"),
          dims=["ok", "ok", "ps", "ok", "ps"]),
     dict(name="N-Tier", abbr="ntier-cx", dl="Fink (BZI2)", status="ok", phase="Definition & Clarification",
-         go_live=None, sup=None, ms=None,
+         go_live=None, sup=None, ms=("ok", "Working group framework created", "Q4 2026"),
          dims=["ok", "ns", "ns", "ns", "ns"]),
 ]
 GO_LIVE_MISSING = "not defined yet"
@@ -124,10 +123,11 @@ DOT_W = 0.15  # dot + gap before a dotted label
 
 # Dimensions block: "Dimensions" header line, then one thin swimlane per dimension (dot only in the cards)
 DIM_HEAD = LH + 0.04   # header line inside the dimensions row
-DIM_SUB_MIN = 0.18     # minimum height of one swimlane
-DIM_DOT = 0.11         # dot diameter in the swimlanes
+DIM_SUB_MIN = 0.22     # minimum height of one swimlane
+DIM_DOT = 0.12         # dot diameter in the swimlanes
 DIM_LABEL_PT = 8.5     # dimension names in the label column
-LANE = "EDF0F3"        # swimlane divider
+LANE = "F0F3F6"        # tint of every other swimlane in the cards
+LANE_DARK = "0B3A45"   # matching tint behind every other dimension name (label column)
 RING = "AEB9C1"        # outline of the "not started" ring on white cards
 DIM_SHORT = {"External · CX Association": "CX Association"}  # label column is narrow
 
@@ -209,8 +209,8 @@ def cell(key, uc, w, board, row_h=None):
         return k * LH, lambda s, x, top: para_box(s, f"{n} Suppliers", x, top, w, k, paras)
 
     if key == "ms":
-        if not uc["ms"]:  # verified: no amber/red milestone in the source deck
-            note = "No critical milestone"
+        if not uc["ms"]:  # no upcoming milestone in the source deck
+            note = "No milestone planned"
             k = n_lines(note, F, w)
             return k * LH, lambda s, x, top: para_box(s, f"{n} Milestone", x, top, w, k,
                                                       [[r(note, F, False, FAINT, None, True)]])
@@ -230,8 +230,8 @@ def cell(key, uc, w, board, row_h=None):
         def draw(s, x, top):
             ys, sub = dim_rows(top, row_h or (GRID["pad_top"] + min_h + GRID["pad_bottom"]), n_sub)
             for i, (dim, st, y) in enumerate(zip(board["dims"], uc["dims"], ys)):
-                if i:  # fine swimlane line between the sub-rows
-                    s.shape(f"{n} Dim Lane {dim}", x, y, w, 0.005, fill=LANE)
+                if i % 2 == 0:  # zebra swimlanes: every other lane tinted, edge to edge of the card
+                    s.shape(f"{n} Dim Lane {dim}", x - GRID["pad"], y, w + 2 * GRID["pad"], sub, fill=LANE)
                 status_dot(s, f"{n} Dim {dim}", x, y + sub / 2, DIM_DOT, st)
         return min_h, draw
 
@@ -266,12 +266,11 @@ USE_CASE_BOARD = dict(
         ("phase", "Phase"),
         ("golive", "E2E go-live target date"),
         ("sup", "Suppliers enabled 2026"),
-        ("ms", "Next critical milestone"),
+        ("ms", "Next (critical) milestone"),
         ("dims", "Dimensions"),
-        ("dec", "Decision required"),
     ],
     notes=f"Use Case Pulse Management Overview {CW} – one card per use case (read top to bottom), "
-          "sorted by overall status. Next critical milestone = most critical amber/red milestone.",
+          "sorted by overall status. Next (critical) milestone = most critical amber/red milestone, else the next one.",
 )
 
 
@@ -309,8 +308,9 @@ def add_frame(s, board):
 
 GRID = dict(top_y=1.07, bottom_y=7.30, label_x=0.30, label_w=1.08, col_x0=1.42, col_x1=13.03, gap=0.045,
             pad=0.075, pad_top=0.07, pad_bottom=0.06)
-# Leftover height: top row / middle band / dimensions / decisions. Decision required only moves down.
-SPARE_SHARE = dict(top=0.5, middle=3, dims=5, dec=0)
+# Leftover height: top row / middle band / dimensions.
+SPARE_SHARE = dict(top=0.5, middle=2.5, dims=5)
+FOOTER_H = 0.42   # reserved at the bottom of every card for an optional tag (e.g. agenda link)
 
 
 def card_width(board):
@@ -330,9 +330,9 @@ def label_runs(label):
 def compute_layout(boards):
     """One vertical grid for all boards.
 
-    The first row (overall status) and the last two rows (dimensions, decisions) sit at the same height on
-    every slide. The rows in between share the band between them, so a board with fewer middle rows gets
-    more air instead of a gap.
+    The first row (overall status) and the last row (dimensions) sit at the same height on every slide;
+    the rows in between share the band between them. Below the dimensions, FOOTER_H is kept free for
+    card tags.
     """
     name_lines = dl_lines = 1
     content = {}
@@ -340,7 +340,7 @@ def compute_layout(boards):
         _, w = card_width(board)
         cols = board["columns"]
         name_lines = max(name_lines, *(n_lines(uc["name"], F_NAME, w * SEGOE_FACTOR, bold=True) for uc in cols))
-        dl_lines = max(dl_lines, *(n_lines(uc["dl"], F, w) for uc in cols))
+        dl_lines = max(dl_lines, *(dl_height(uc["dl"], w) for uc in cols))
         content[board["title"]] = [
             GRID["pad_top"] + max(max(cell(key, uc, w, board)[0] for uc in cols), label_runs(label)[1] * LH)
             + GRID["pad_bottom"] for key, label in board["rows"]]
@@ -351,24 +351,30 @@ def compute_layout(boards):
     rows_top = y_bar + 0.10
 
     top = max(h[0] for h in content.values())
-    middle = max(sum(h[1:-2]) for h in content.values())
-    dims = max(h[-2] for h in content.values())
-    dec = max(h[-1] for h in content.values())
-    spare = (GRID["bottom_y"] - 0.06) - (rows_top + top + middle + dims + dec)
+    middle = max(sum(h[1:-1]) for h in content.values())
+    dims = max(h[-1] for h in content.values())
+    rows_bottom = GRID["bottom_y"] - FOOTER_H
+    spare = rows_bottom - (rows_top + top + middle + dims)
     if spare < 0:
         print(f"WARNING: content is {-spare:.2f} in taller than the slide", file=sys.stderr)
     share = {k: max(spare, 0) * v / sum(SPARE_SHARE.values()) for k, v in SPARE_SHARE.items()}
-    top, middle, dims, dec = top + share["top"], middle + share["middle"], dims + share["dims"], dec + share["dec"]
+    top, middle, dims = top + share["top"], middle + share["middle"], dims + share["dims"]
 
     heights = {}
     for title, h in content.items():
-        mids = h[1:-2]
+        mids = h[1:-1]
         weights = [1] + [2] * (len(mids) - 1)  # first middle row (phase / goal) gets less extra air
         extra = middle - sum(mids)
         mids = [m + extra * wt / sum(weights) for m, wt in zip(mids, weights)]
-        heights[title] = [top] + mids + [dims, dec]
+        heights[title] = [top] + mids + [dims]
     return dict(name_lines=name_lines, dl_lines=dl_lines, y_name=y_name, y_dl=y_dl, y_bar=y_bar,
-                rows_top=rows_top, heights=heights)
+                rows_top=rows_top, heights=heights, rows_bottom=rows_top + top + middle + dims)
+
+
+def dl_height(dl, w):
+    """Lines needed by a Domain / Workstream Lead entry; a list means one paragraph per entry."""
+    parts = dl if isinstance(dl, list) else [dl]
+    return sum(n_lines(p, F, w) for p in parts)
 
 
 def build(board=USE_CASE_BOARD, layout=None):
@@ -391,8 +397,14 @@ def build(board=USE_CASE_BOARD, layout=None):
                anchor="t", line_pts=1300)
         y_abbr = y_name + n_lines(n, F_NAME, w * SEGOE_FACTOR, bold=True) * LH_NAME + 0.02  # directly below the name
         para_box(s, f"Col {n} Abbr", x, y_abbr, w, 1, [[r(uc["abbr"], F, False, MUTED)]])
+        dls = uc["dl"] if isinstance(uc["dl"], list) else [uc["dl"]]
         para_box(s, f"Col {n} Domain Lead", x, y_dl, w, dl_lines,
-                 [[r(uc["dl"], F, False, FAINT if uc["dl"] == "tbd" else INK)]])
+                 [[r(d, F, False, FAINT if d == "tbd" else INK)] for d in dls])
+        if uc.get("tag"):  # e.g. link to an agenda item, in the reserved footer
+            tw = min(text_w(uc["tag"], F, bold=True) + 0.30, w)
+            ty = layout["rows_bottom"] + (FOOTER_H - 0.26) / 2
+            s.shape(f"Col {n} Tag", x, ty, tw, 0.26, "roundRect", 50000, COMPLETED)
+            s.text(f"Col {n} Tag Text", x, ty, tw, 0.26, [[r(uc["tag"], F, True, "FFFFFF")]], algn="ctr", wrap=False)
         s.shape(f"Col {n} Status Bar", x, y_bar, w, 0.04, "roundRect", 50000, STATUS[uc["status"]][1])
 
     # Left column on the dark background: labels aligned with name / Domain Lead and with each row
@@ -408,8 +420,11 @@ def build(board=USE_CASE_BOARD, layout=None):
                anchor="t", line_pts=1150)
         if key == "dims":  # dimension names once, in the label column, centred on their swimlane
             ys, sub = dim_rows(top, h, len(board["dims"]))
-            for dim, yy in zip(board["dims"], ys):
-                s.text(f"Dim Label {dim}", g["label_x"] + 0.08, yy, g["label_w"] - 0.08, sub,
+            for i, (dim, yy) in enumerate(zip(board["dims"], ys)):
+                if i % 2 == 0:  # same zebra rhythm as in the cards, so each name lines up with its dots
+                    s.shape(f"Dim Lane {dim}", g["label_x"] - 0.08, yy, g["col_x0"] - g["label_x"] + 0.08, sub,
+                            fill=LANE_DARK)
+                s.text(f"Dim Label {dim}", g["label_x"] + 0.06, yy, g["label_w"] - 0.06, sub,
                        [[r(DIM_SHORT.get(dim, dim), DIM_LABEL_PT, False, ACCENT_LIGHT)]], anchor="ctr", wrap=False)
         for c, uc in enumerate(columns):
             x = g["col_x0"] + c * (cw + g["gap"]) + g["pad"]
