@@ -19,7 +19,7 @@ import build_overview  # noqa: E402
 from xml.sax.saxutils import escape  # noqa: E402
 
 TEMPLATE = "templates/Template_UseCase_PULSE.pptx"
-OUTPUT = sys.argv[1] if len(sys.argv) > 1 else "output/Catena-X_Pulse_Management_Overview_CW41_26.pptx"
+OUTPUT = sys.argv[1] if len(sys.argv) > 1 else "output/Catena-X_Pulse_Management_Overview_CW42_26.pptx"
 
 SLIDE_CT = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml"
 SLIDE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide"
